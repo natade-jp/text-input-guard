@@ -2,6 +2,12 @@ import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import terser from "@rollup/plugin-terser";
 import dts from "rollup-plugin-dts";
+import replace from "@rollup/plugin-replace";
+import fs from "node:fs";
+
+// package.json から version を読む（rollup config が ESM でも確実に動く方式）
+const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+const VERSION = pkg.version;
 
 /**
  * JSDoc の {import("...").X} を {X} に置換する
@@ -28,7 +34,7 @@ function jsdocImportToLocalType() {
  * 公開用ファイルの設定データを作成
  * @param {Object} options - オプション
  * @param {string} options.banner - バナー（minify時に付与）
- * @param {string} options.globalName - UMD/IIFE でのグローバル変数名（例: "Mojix"）
+ * @param {string} options.globalName - UMD/IIFE でのグローバル変数名（例: "JPInputGuard"）
  * @param {string} options.input - 入力となるESMのトップファイル名
  * @param {string} options.outputFile - 出力するファイル名
  * @param {"umd"|"iife"|"cjs"|"esm"} options.format - 出力フォーマット
@@ -44,7 +50,17 @@ const createData = function ({ banner, globalName, input, outputFile, format, is
 			format
 		},
 		/** @type {import("rollup").Plugin[]} */
-		plugins: [resolve(), commonjs(), jsdocImportToLocalType()]
+		plugins: [
+			replace({
+				preventAssignment: true,
+				values: {
+					"process.env.VERSION": JSON.stringify(VERSION)
+				}
+			}),
+			resolve(),
+			commonjs(),
+			jsdocImportToLocalType()
+		]
 	};
 
 	// UMD/IIFE の場合のみグローバル名を設定
@@ -69,18 +85,18 @@ const createData = function ({ banner, globalName, input, outputFile, format, is
 
 const banner = `/*!
  * JP Input Guard
- * AUTHOR: natade (https://twitter.com/natadea, https://github.com/natade-jp/)
+ * AUTHOR: natade (https://github.com/natade-jp/)
  * LICENSE: MIT https://opensource.org/licenses/MIT
  */`;
 
 const packageName = "jp-input-guard";
 const globalName = "JPInputGuard";
-const input = "./src/jp-input-guard.js";
+const input = "./src/main.js";
 
 /** @type {import("rollup").RollupOptions[]} */
 const data = [];
 
-// UMD（グローバルは Mojix、ファイル名は mojix.js）
+// UMD（グローバルは JPInputGuard, ファイル名は jp-input-guard.js）
 data.push(
 	createData({
 		banner,

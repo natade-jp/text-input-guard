@@ -1,0 +1,22 @@
+{
+	"editor.formatOnSave": true,
+
+	"[javascript]": {
+		"editor.defaultFormatter": "dbaeumer.vscode-eslint"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "dbaeumer.vscode-eslint"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "dbaeumer.vscode-eslint"
+	},
+
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit"
+	},
+
+	"eslint.validate": ["javascript", "json", "jsonc"],
+
+	"editor.tabSize": 4,
+	"editor.insertSpaces": false
+}

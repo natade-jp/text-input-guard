@@ -36,44 +36,24 @@
 	],
 	"scripts": {
 		"build": "node ./scripts/package.build.js",
-		"test": "jest",
-		"test_target": "node ./scripts/package.test.js"
+		"test": "node --test"
 	},
 	"directories": {
 		"src": "./src",
 		"build": "./build"
 	},
-	"jest": {
-		"verbose": true,
-		"rootDir": "./src",
-		"moduleFileExtensions": [
-			"js",
-			"mjs"
-		],
-		"testMatch": [
-			"**/__tests__/**/*.?(m)js?(x)",
-			"**/?(*.)(spec|test).?(m)js?(x)"
-		],
-		"transform": {
-			"^.+\\.(js|mjs)$": "babel-jest"
-		}
-	},
 	"devDependencies": {
-		"@eslint/js": "^9.39.2",
+		"@eslint/js": "^10.0.1",
 		"@rollup/plugin-buble": "^1.0.3",
 		"@rollup/plugin-commonjs": "^29.0.0",
 		"@rollup/plugin-node-resolve": "^16.0.3",
+		"@rollup/plugin-replace": "^6.0.3",
 		"@rollup/plugin-terser": "^0.4.4",
-		"@types/jest": "^30.0.0",
 		"@types/node": "^25.0.10",
-		"babel-jest": "^30.2.0",
-		"baseline-browser-mapping": "^2.9.17",
-		"eslint": "^9.39.2",
-		"eslint-plugin-jest": "^29.0.1",
+		"eslint": "^10.0.0",
 		"eslint-plugin-jsonc": "^2.21.0",
 		"eslint-plugin-unicorn": "^62.0.0",
 		"globals": "^17.1.0",
-		"jest": "^30.2.0",
 		"jsonc-eslint-parser": "^2.4.2",
 		"ntfile": "^2.0.0",
 		"rollup": "^4.56.0",

@@ -71,7 +71,6 @@ export default [
 			unicorn: unicornPlugin
 		},
 		rules: {
-
 			// インデントはタブ、switch の case は 1 段下げる
 			indent: ["error", "tab", { SwitchCase: 1 }],
 
@@ -178,9 +177,6 @@ export default [
 
 			// 関数の引数が複数行なら括弧内の改行スタイルを統一する
 			"function-paren-newline": ["error", "multiline-arguments"],
-
-			// 改行時の演算子位置を統一する（演算子は次行の先頭）
-			"operator-linebreak": ["error", "before"],
 
 			// 文字列の slice は substring/substr より slice を優先する
 			"unicorn/prefer-string-slice": "error",
