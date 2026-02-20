@@ -49,6 +49,7 @@
  * @property {string} invalidClass - エラー時に付与するclass名
  * @property {boolean} composing - IME変換中かどうか
  * @property {(e: JpigError) => void} pushError - エラーを登録する関数
+ * @property {(req: RevertRequest) => void} requestRevert - 入力を直前の受理値へ巻き戻す要求
  */
 
 /**
@@ -82,6 +83,21 @@
  * @property {string|null} originalName - 元のname属性
  * @property {string} originalClass - 元のclass文字列
  * @property {HTMLInputElement} createdDisplay - 生成した表示用input
+ */
+
+/**
+ * selection（カーソル/選択範囲）の退避情報
+ * @typedef {Object} SelectionState
+ * @property {number|null} start - selectionStart
+ * @property {number|null} end - selectionEnd
+ * @property {"forward"|"backward"|"none"|null} direction - selectionDirection
+ */
+
+/**
+ * revert要求（入力を巻き戻す指示）
+ * @typedef {Object} RevertRequest
+ * @property {string} reason - ルール名や理由（例: "digits.int_overflow"）
+ * @property {any} [detail] - デバッグ用の詳細
  */
 
 const DEFAULT_INVALID_CLASS = "is-invalid";
@@ -283,6 +299,24 @@ class InputGuard {
 		 * @type {boolean}
 		 */
 		this.pendingCompositionCommit = false;
+
+		/**
+		 * 直前に受理した表示値（block時の戻し先）
+		 * @type {string}
+		 */
+		this.lastAcceptedValue = "";
+
+		/**
+		 *  直前に受理したselection（block時の戻し先）
+		 * @type {SelectionState}
+		 */
+		this.lastAcceptedSelection = { start: null, end: null, direction: null };
+
+		/**
+		 * ルールからのrevert要求
+		 * @type {RevertRequest|null}
+		 */
+		this.revertRequest = null;
 	}
 
 	/**
@@ -295,6 +329,39 @@ class InputGuard {
 		this.bindEvents();
 		// 初期値を評価
 		this.evaluateInput();
+	}
+
+	/**
+	 * display要素のselection情報を読む
+	 * @param {HTMLInputElement|HTMLTextAreaElement} el
+	 * @returns {SelectionState}
+	 */
+	readSelection(el) {
+		return {
+			start: el.selectionStart,
+			end: el.selectionEnd,
+			direction: el.selectionDirection
+		};
+	}
+
+	/**
+	 * display要素のselection情報を復元する
+	 * @param {HTMLInputElement|HTMLTextAreaElement} el
+	 * @param {SelectionState} sel
+	 * @returns {void}
+	 */
+	writeSelection(el, sel) {
+		if (sel.start == null || sel.end == null) return;
+		try {
+			// direction は未対応環境があるので try で包む
+			if (sel.direction) {
+				el.setSelectionRange(sel.start, sel.end, sel.direction);
+			} else {
+				el.setSelectionRange(sel.start, sel.end);
+			}
+		} catch (_e) {
+			// type=hidden などでは例外になることがある（今回は display が text 想定）
+		}
 	}
 
 	/**
@@ -360,6 +427,10 @@ class InputGuard {
 		this.rawElement = input;
 
 		this.swapState.createdDisplay = display;
+
+		// revert 機構
+		this.lastAcceptedValue = display.value;
+		this.lastAcceptedSelection = this.readSelection(display);
 	}
 
 	/**
@@ -496,6 +567,36 @@ class InputGuard {
 	}
 
 	/**
+	 * 直前の受理値へ巻き戻す（表示値＋raw同期＋selection復元）
+	 * - block用途なので、余計な正規化/formatは走らせずに戻す
+	 * @param {RevertRequest} req
+	 * @returns {void}
+	 */
+	revertDisplay(req) {
+		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+
+		// いまの入力を取り消して、直前の受理値へ戻す
+		display.value = this.lastAcceptedValue;
+
+		// selection復元（取れている場合のみ）
+		this.writeSelection(display, this.lastAcceptedSelection);
+
+		// raw も同じ値へ（swapでも整合する）
+		this.syncRaw(this.lastAcceptedValue);
+
+		// block なので、エラー表示は基本クリア（「入らなかった」だけにする）
+		this.clearErrors();
+		this.applyInvalidClass();
+
+		// 連鎖防止（次の処理に持ち越さない）
+		this.revertRequest = null;
+
+		if (this.warn) {
+			console.log(`[jp-input-guard] reverted: ${req.reason}`, req.detail);
+		}
+	}
+
+	/**
 	 * ルール実行に渡すコンテキストを作る（pushErrorで errors に積める）
 	 * @returns {GuardContext}
 	 */
@@ -508,7 +609,13 @@ class InputGuard {
 			warn: this.warn,
 			invalidClass: this.invalidClass,
 			composing: this.composing,
-			pushError: (e) => this.errors.push(e)
+			pushError: (e) => this.errors.push(e),
+			requestRevert: (req) => {
+				// 1回でもrevert要求が出たら採用（最初の理由を保持）
+				if (!this.revertRequest) {
+					this.revertRequest = req;
+				}
+			}
 		};
 	}
 
@@ -523,11 +630,10 @@ class InputGuard {
 	/**
 	 * normalize.char フェーズを実行する（文字の正規化）
 	 * @param {string} value
+ 	 * @param {GuardContext} ctx
 	 * @returns {string}
 	 */
-	/** @param {string} value */
-	runNormalizeChar(value) {
-		const ctx = this.createCtx();
+	runNormalizeChar(value, ctx) {
 		let v = value;
 		for (const rule of this.normalizeCharRules) {
 			v = rule.normalizeChar ? rule.normalizeChar(v, ctx) : v;
@@ -538,10 +644,10 @@ class InputGuard {
 	/**
 	 * normalize.structure フェーズを実行する（構造の正規化）
 	 * @param {string} value
+ 	 * @param {GuardContext} ctx
 	 * @returns {string}
 	 */
-	runNormalizeStructure(value) {
-		const ctx = this.createCtx();
+	runNormalizeStructure(value, ctx) {
 		let v = value;
 		for (const rule of this.normalizeStructureRules) {
 			v = rule.normalizeStructure ? rule.normalizeStructure(v, ctx) : v;
@@ -552,10 +658,10 @@ class InputGuard {
 	/**
 	 * validate フェーズを実行する（エラーを積むだけで、値は変えない想定）
 	 * @param {string} value
+ 	 * @param {GuardContext} ctx
 	 * @returns {void}
 	 */
-	runValidate(value) {
-		const ctx = this.createCtx();
+	runValidate(value, ctx) {
 		for (const rule of this.validateRules) {
 			if (rule.validate) {
 				rule.validate(value, ctx);
@@ -566,10 +672,10 @@ class InputGuard {
 	/**
 	 * fix フェーズを実行する（commit時のみ：切り捨て/四捨五入などの穏やか補正）
 	 * @param {string} value
+ 	 * @param {GuardContext} ctx
 	 * @returns {string}
 	 */
-	runFix(value) {
-		const ctx = this.createCtx();
+	runFix(value, ctx) {
 		let v = value;
 		for (const rule of this.fixRules) {
 			v = rule.fix ? rule.fix(v, ctx) : v;
@@ -580,10 +686,10 @@ class InputGuard {
 	/**
 	 * format フェーズを実行する（commit時のみ：カンマ付与など表示整形）
 	 * @param {string} value
+ 	 * @param {GuardContext} ctx
 	 * @returns {string}
 	 */
-	runFormat(value) {
-		const ctx = this.createCtx();
+	runFormat(value, ctx) {
 		let v = value;
 		for (const rule of this.formatRules) {
 			v = rule.format ? rule.format(v, ctx) : v;
@@ -677,9 +783,10 @@ class InputGuard {
 	 * - 文字が削除される/増える可能性があるので、左側だけ正規化した長さで補正する
 	 * @param {HTMLInputElement|HTMLTextAreaElement} el
 	 * @param {string} nextValue
+	 * @param {GuardContext} ctx
 	 * @returns {void}
 	 */
-	setDisplayValuePreserveCaret(el, nextValue) {
+	setDisplayValuePreserveCaret(el, nextValue, ctx) {
 		const prevValue = el.value;
 		if (prevValue === nextValue) return;
 
@@ -695,8 +802,8 @@ class InputGuard {
 		// 左側の文字列を「同じ正規化」で処理して、新しいカーソル位置を推定
 		const leftPrev = prevValue.slice(0, start);
 		let leftNext = leftPrev;
-		leftNext = this.runNormalizeChar(leftNext);
-		leftNext = this.runNormalizeStructure(leftNext);
+		leftNext = this.runNormalizeChar(leftNext, ctx);
+		leftNext = this.runNormalizeStructure(leftNext, ctx);
 
 		el.value = nextValue;
 
@@ -720,27 +827,40 @@ class InputGuard {
 		}
 
 		this.clearErrors();
+		this.revertRequest = null;
 
 		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
 		const current = display.value;
 
+		// ctx を作る（ requestRevert が使える）
+		const ctx = this.createCtx();
+
 		let v = current;
 		// 固定順
-		v = this.runNormalizeChar(v);
-		v = this.runNormalizeStructure(v);
+		v = this.runNormalizeChar(v, ctx);
+		v = this.runNormalizeStructure(v, ctx);
 
 		// normalizeで変わったら反映（selection補正）
 		if (v !== current) {
-			this.setDisplayValuePreserveCaret(display, v);
+			this.setDisplayValuePreserveCaret(display, v, ctx);
 		}
 
 		// validate（入力中：エラー出すだけ）
-		this.runValidate(v);
+		this.runValidate(v, ctx);
+
+		// revert 要求が出たら巻き戻して終了
+		if (this.revertRequest) {
+			this.revertDisplay(this.revertRequest);
+			return;
+		}
 
 		// rawは常に最新に
 		this.syncRaw(v);
-
 		this.applyInvalidClass();
+
+		// ここまで来たら「受理」扱いとして保存
+		this.lastAcceptedValue = v;
+		this.lastAcceptedSelection = this.readSelection(display);
 	}
 
 	/**
@@ -754,22 +874,42 @@ class InputGuard {
 		}
 
 		this.clearErrors();
+		this.revertRequest = null;
 
+		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
 		let v = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement).value;
 
-		v = this.runNormalizeChar(v);
-		v = this.runNormalizeStructure(v);
+		const ctx = this.createCtx();
 
-		this.runValidate(v);
+		v = this.runNormalizeChar(v, ctx);
+		v = this.runNormalizeStructure(v, ctx);
+
+		// 入力内容の検査
+		this.runValidate(v, ctx);
+
+		// block要求があれば戻す（将来用に枠だけ用意）
+		if (this.revertRequest) {
+			this.revertDisplay(this.revertRequest);
+			return;
+		}
 
 		// commitのみ
-		v = this.runFix(v);
-		v = this.runFormat(v);
+		v = this.runFix(v, ctx);
+		v = this.runFormat(v, ctx);
+
+		// 最終値で検査し直す（fixで繰り上がる等に対応）
+		this.clearErrors();
+		this.revertRequest = null;
+		this.runValidate(v, ctx);
 
 		this.syncDisplay(v);
 		this.syncRaw(v);
 
 		this.applyInvalidClass();
+
+		// commit後の値を受理値として保存（revert先を自然に）
+		this.lastAcceptedValue = v;
+		this.lastAcceptedSelection = this.readSelection(display);
 	}
 
 	/**

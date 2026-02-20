@@ -57,10 +57,14 @@ const guard = attach(input, {
 			allowDecimal: true
 		}),
 		rules.digits({
-		int: 6,
-		frac: 2,
-		fixIntOnBlur: "truncateLeft",
-		fixFracOnBlur: "truncate"
+			int: 4,
+			frac: 2,
+//			fixIntOnBlur: "truncateLeft",
+//			fixFracOnBlur: "truncate"
+//			overflowInputFrac: "block", // 小数3桁目は入らない
+//			overflowInputInt: "none"    // 整数は赤くなるだけ
+			overflowInputInt: "block",
+			overflowInputFrac: "block"
 		})
 	]
 });
