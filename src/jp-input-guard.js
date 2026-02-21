@@ -426,6 +426,15 @@ class InputGuard {
 		input.removeAttribute("id"); // displayに引き継ぐため
 		input.dataset.jpigRole = "raw";
 
+		// 元idのメタを残す（デバッグ/参照用）
+		if (this.swapState.originalId) {
+			input.dataset.jpigOriginalId = this.swapState.originalId;
+		}
+
+		if (this.swapState.originalName) {
+			input.dataset.jpigOriginalName = this.swapState.originalName;
+		}
+
 		// display生成（ユーザー入力担当）
 		const display = document.createElement("input");
 		display.type = "text";
@@ -462,13 +471,10 @@ class InputGuard {
 	}
 
 	/**
-	 * ガード解除（イベント解除＋swap復元）
+	 * swapしていた場合、元のinputへ復元する（detach用）
 	 * @returns {void}
 	 */
-	detach() {
-		// まずイベント解除（displayElementがswap後の可能性があるので先に外す）
-		this.unbindEvents();
-
+	restoreSeparateValue() {
 		// swapしていないならここで終わり
 		if (!this.swapState) {
 			return;
@@ -517,15 +523,26 @@ class InputGuard {
 
 		// data属性（jpig用）は消しておく
 		delete raw.dataset.jpigRole;
+		delete raw.dataset.jpigOriginalId;
+		delete raw.dataset.jpigOriginalName;
 
 		// elements参照を original に戻す
 		this.hostElement = this.originalElement;
 		this.displayElement = this.originalElement;
 		this.rawElement = null;
+	}
 
+	/**
+	 * ガード解除
+	 * @returns {void}
+	 */
+	detach() {
+		// イベント解除（displayElementがswap後の可能性があるので先に外す）
+		this.unbindEvents();
+		// swap復元
+		this.restoreSeparateValue();
 		// swapState破棄
 		this.swapState = null;
-
 		// 以後このインスタンスは利用不能にしてもいいが、今回は明示しない
 	}
 
