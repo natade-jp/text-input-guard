@@ -356,7 +356,7 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	writeSelection(el, sel) {
-		if (sel.start == null || sel.end == null) return;
+		if (sel.start == null || sel.end == null) { return; }
 		try {
 			// direction は未対応環境があるので try で包む
 			if (sel.direction) {
@@ -768,7 +768,7 @@ class InputGuard {
 
 		queueMicrotask(() => {
 			// その後 input で処理済みなら何もしない
-			if (!this.pendingCompositionCommit) return;
+			if (!this.pendingCompositionCommit) { return; }
 
 			this.pendingCompositionCommit = false;
 			this.evaluateInput();
@@ -817,7 +817,7 @@ class InputGuard {
 	 */
 	setDisplayValuePreserveCaret(el, nextValue, ctx) {
 		const prevValue = el.value;
-		if (prevValue === nextValue) return;
+		if (prevValue === nextValue) { return; }
 
 		const start = el.selectionStart;
 		const end = el.selectionEnd;

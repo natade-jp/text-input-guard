@@ -1,7 +1,6 @@
 // eslint.config.js
 import js from "@eslint/js";
 import globals from "globals";
-import jestPlugin from "eslint-plugin-jest";
 import unicornPlugin from "eslint-plugin-unicorn";
 import jsoncPlugin from "eslint-plugin-jsonc";
 import * as jsoncParser from "jsonc-eslint-parser";
@@ -67,7 +66,6 @@ export default [
 			}
 		},
 		plugins: {
-			jest: jestPlugin,
 			unicorn: unicornPlugin
 		},
 		rules: {

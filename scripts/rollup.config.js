@@ -54,7 +54,7 @@ const createData = function ({ banner, globalName, input, outputFile, format, is
 			replace({
 				preventAssignment: true,
 				values: {
-					__VERSION__ : JSON.stringify(VERSION)
+					__VERSION__: JSON.stringify(VERSION)
 				}
 			}),
 			resolve(),

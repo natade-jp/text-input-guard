@@ -173,21 +173,64 @@ export function numeric(options = {}) {
 		 * 確定時にだけ消したい “未完成な数値” を整える
 		 * - "-" / "." / "-." は空にする
 		 * - 末尾の "." は削除する（"12." → "12"）
+		 * - ".1" → "0.1"
+		 * - "-.1" → "-0.1"
+		 * - 整数部の不要な先頭ゼロを除去（"00" → "0", "-0" → "0"）
 		 * @param {string} value
 		 * @returns {string}
 		 */
 		fix(value) {
-			const v = String(value);
+			let v = String(value);
 
+			// 未完成な数値は空にする
 			if (v === "-" || v === "." || v === "-.") {
 				return "";
 			}
 
-			if (v.endsWith(".")) {
-				return v.slice(0, -1);
+			// "-.1" → "-0.1"
+			if (v.startsWith("-.")) {
+				v = "-0" + v.slice(1);
 			}
 
-			return v;
+			// ".1" → "0.1"
+			if (v.startsWith(".")) {
+				v = "0" + v;
+			}
+
+			// "12." → "12"
+			if (v.endsWith(".")) {
+				v = v.slice(0, -1);
+			}
+
+			// ---- ここからゼロ正規化 ----
+
+			// 符号分離
+			let sign = "";
+			if (v.startsWith("-")) {
+				sign = "-";
+				v = v.slice(1);
+			}
+
+			const dotIndex = v.indexOf(".");
+			let intPart = dotIndex >= 0 ? v.slice(0, dotIndex) : v;
+			const fracPart = dotIndex >= 0 ? v.slice(dotIndex + 1) : "";
+
+			// 先頭ゼロ削除（全部ゼロなら "0"）
+			intPart = intPart.replace(/^0+/, "");
+			if (intPart === "") {
+				intPart = "0";
+			}
+
+			// "-0" は "0" にする
+			if (sign === "-" && intPart === "0" && (!fracPart || /^0*$/.test(fracPart))) {
+				sign = "";
+			}
+
+			// 再構築
+			if (dotIndex >= 0) {
+				return `${sign}${intPart}.${fracPart}`;
+			}
+			return `${sign}${intPart}`;
 		},
 
 		/**

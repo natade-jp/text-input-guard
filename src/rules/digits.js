@@ -51,9 +51,9 @@ function splitNumber(value) {
  */
 function countIntDigits(intPart, countLeadingZeros) {
 	const s = intPart ?? "";
-	if (s.length === 0) return 0;
+	if (s.length === 0) { return 0; }
 
-	if (countLeadingZeros) return s.length;
+	if (countLeadingZeros) { return s.length; }
 
 	// 先頭ゼロを除外して数える（全部ゼロなら 1 として扱う）
 	const trimmed = s.replace(/^0+/, "");
@@ -81,7 +81,7 @@ function addOne(dec) {
 		}
 	}
 
-	if (carry === 1) arr.unshift("1");
+	if (carry === 1) { arr.unshift("1"); }
 	return arr.join("");
 }
 
@@ -127,7 +127,7 @@ function roundFraction(intPart, fracPart, fracLimit) {
 		}
 	}
 
-	let newFrac = arr.join("");
+	const newFrac = arr.join("");
 	let newInt = intPart;
 
 	if (carry === 1) {
@@ -167,7 +167,7 @@ export function digits(options = {}) {
 			const v = String(value);
 
 			// 入力途中は極力うるさくしない（numericのfixに任せる）
-			if (v === "" || v === "-" || v === "." || v === "-.") return;
+			if (v === "" || v === "-" || v === "." || v === "-.") { return; }
 
 			const { intPart, fracPart } = splitNumber(v);
 
@@ -175,7 +175,6 @@ export function digits(options = {}) {
 			if (typeof opt.int === "number") {
 				const intDigits = countIntDigits(intPart, opt.countLeadingZeros);
 				if (intDigits > opt.int) {
-
 					// 入力ブロック（int）
 					if (opt.overflowInputInt === "block") {
 						ctx.requestRevert({
@@ -199,7 +198,6 @@ export function digits(options = {}) {
 			if (typeof opt.frac === "number") {
 				const fracDigits = (fracPart ?? "").length;
 				if (fracDigits > opt.frac) {
-
 					// 入力ブロック（frac）
 					if (opt.overflowInputFrac === "block") {
 						ctx.requestRevert({
@@ -228,10 +226,12 @@ export function digits(options = {}) {
 		 * @returns {string}
 		 */
 		fix(value, _ctx) {
-			let v = String(value);
-			if (v === "" || v === "-" || v === "." || v === "-.") return v;
+			const v = String(value);
+			if (v === "" || v === "-" || v === "." || v === "-.") { return v; }
 
-			let { sign, intPart, fracPart, hasDot } = splitNumber(v);
+			const parts = splitNumber(v);
+			let { intPart, fracPart } = parts;
+			const { sign, hasDot } = parts;
 
 			// --- 整数部補正 ---
 			if (typeof opt.int === "number" && opt.fixIntOnBlur !== "none") {

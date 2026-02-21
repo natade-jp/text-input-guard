@@ -36,7 +36,11 @@
 	],
 	"scripts": {
 		"build": "node ./scripts/package.build.js",
-		"test": "node --test"
+		"test": "node --test",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format": "prettier . --write",
+		"format:check": "prettier . --check"
 	},
 	"directories": {
 		"src": "./src",
@@ -51,11 +55,13 @@
 		"@rollup/plugin-terser": "^0.4.4",
 		"@types/node": "^25.0.10",
 		"eslint": "^10.0.0",
+		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-jsonc": "^2.21.0",
 		"eslint-plugin-unicorn": "^62.0.0",
 		"globals": "^17.1.0",
 		"jsonc-eslint-parser": "^2.4.2",
 		"ntfile": "^2.0.0",
+		"prettier": "^3.8.1",
 		"rollup": "^4.56.0",
 		"rollup-plugin-dts": "^6.3.0",
 		"typescript": "^5.9.3"

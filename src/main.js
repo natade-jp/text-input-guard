@@ -34,4 +34,5 @@ export const rules = {
  * 例: rollup replace で "__VERSION__" を package.json の version に置換
  */
 // @ts-ignore
+// eslint-disable-next-line no-undef
 export const version = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";

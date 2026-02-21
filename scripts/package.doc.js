@@ -93,7 +93,7 @@ const batch = function () {
 		const line = text[i];
 		// eslint-disable-next-line unicorn/prefer-includes
 		if (line.indexOf("// if name is `*`, need to escape.") !== -1) {
-			// eslint-disable-next-line quotes
+			// eslint-disable-next-line quotes, no-useless-escape
 			const codeLine = `const regexp = new RegExp(\`[~]\${name.replace(/[\\\(\\\)]/g, "").replace('*', '\\\\*')}$\`); // if name is \`*\`, need to escape.`;
 			text.splice(i, 1, codeLine);
 			break;

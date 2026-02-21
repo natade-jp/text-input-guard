@@ -1,0 +1,8 @@
+dist/
+build/
+node_modules/
+*.js
+*.cjs
+*.mjs
+*.ts
+*.json
