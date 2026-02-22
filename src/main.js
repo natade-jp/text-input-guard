@@ -10,18 +10,28 @@
  *  The MIT license https://opensource.org/licenses/MIT
  */
 
-// core
-export { attach } from "./jp-input-guard.js";
-
 // rules (individual exports)
 export { digits } from "./rules/digits.js";
 export { numeric } from "./rules/numeric.js";
 export { comma } from "./rules/formatComma.js";
 
+import { attach } from "./jp-input-guard.js";
+import { InputGuardAutoAttach } from "./auto-attach.js";
+
 // rules namespace export
 import { digits } from "./rules/digits.js";
 import { numeric } from "./rules/numeric.js";
 import { comma } from "./rules/formatComma.js";
+
+const auto = new InputGuardAutoAttach(attach, [
+//	{ name: "numeric", fromDataset: numeric.fromDataset },
+//	{ name: "digits", fromDataset: digits.fromDataset }
+//	{ name: "comma", fromDataset: comma.fromDataset }
+]);
+
+// core
+export { attach };
+export const autoAttach = (root) => auto.autoAttach(root);
 
 /**
  * ルール生成関数の名前空間（rules.xxx(...) で使う）
