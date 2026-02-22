@@ -8,6 +8,8 @@
  *  The MIT license https://opensource.org/licenses/MIT
  */
 
+import { parseDatasetBool, parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
+
 /**
  * digits ルールのオプション
  * @typedef {Object} DigitsRuleOptions
@@ -286,3 +288,82 @@ export function digits(options = {}) {
 		}
 	};
 }
+
+/**
+ * datasetから digits ルールを生成する
+ * - data-jpig-rules-digits が無ければ null
+ * - オプションは data-jpig-rules-digits-xxx から読む
+ *
+ * 対応する data 属性（dataset 名）
+ * - data-jpig-rules-digits                          -> dataset.jpigRulesDigits
+ * - data-jpig-rules-digits-int                      -> dataset.jpigRulesDigitsInt
+ * - data-jpig-rules-digits-frac                     -> dataset.jpigRulesDigitsFrac
+ * - data-jpig-rules-digits-count-leading-zeros      -> dataset.jpigRulesDigitsCountLeadingZeros
+ * - data-jpig-rules-digits-fix-int-on-blur          -> dataset.jpigRulesDigitsFixIntOnBlur
+ * - data-jpig-rules-digits-fix-frac-on-blur         -> dataset.jpigRulesDigitsFixFracOnBlur
+ * - data-jpig-rules-digits-overflow-input-int       -> dataset.jpigRulesDigitsOverflowInputInt
+ * - data-jpig-rules-digits-overflow-input-frac      -> dataset.jpigRulesDigitsOverflowInputFrac
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {import("../jp-input-guard.js").Rule|null}
+ */
+digits.fromDataset = function fromDataset(dataset, _el) {
+	// ON判定
+	if (dataset.jpigRulesDigits == null) {
+		return null;
+	}
+
+	/** @type {DigitsRuleOptions} */
+	const options = {};
+
+	// int / frac
+	const intN = parseDatasetNumber(dataset.jpigRulesDigitsInt);
+	if (intN != null) {
+		options.int = intN;
+	}
+
+	const fracN = parseDatasetNumber(dataset.jpigRulesDigitsFrac);
+	if (fracN != null) {
+		options.frac = fracN;
+	}
+
+	// countLeadingZeros
+	const clz = parseDatasetBool(dataset.jpigRulesDigitsCountLeadingZeros);
+	if (clz != null) {
+		options.countLeadingZeros = clz;
+	}
+
+	// fixIntOnBlur / fixFracOnBlur
+	const fixInt = parseDatasetEnum(dataset.jpigRulesDigitsFixIntOnBlur, [
+		"none",
+		"truncateLeft",
+		"truncateRight",
+		"clamp"
+	]);
+	if (fixInt != null) {
+		options.fixIntOnBlur = fixInt;
+	}
+
+	const fixFrac = parseDatasetEnum(dataset.jpigRulesDigitsFixFracOnBlur, [
+		"none",
+		"truncate",
+		"round"
+	]);
+	if (fixFrac != null) {
+		options.fixFracOnBlur = fixFrac;
+	}
+
+	// overflowInputInt / overflowInputFrac
+	const ovInt = parseDatasetEnum(dataset.jpigRulesDigitsOverflowInputInt, ["none", "block"]);
+	if (ovInt != null) {
+		options.overflowInputInt = ovInt;
+	}
+
+	const ovFrac = parseDatasetEnum(dataset.jpigRulesDigitsOverflowInputFrac, ["none", "block"]);
+	if (ovFrac != null) {
+		options.overflowInputFrac = ovFrac;
+	}
+
+	return digits(options);
+};

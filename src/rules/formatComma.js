@@ -51,3 +51,21 @@ export function comma() {
 		}
 	};
 }
+/**
+ * datasetから comma ルールを生成する
+ * - data-jpig-rules-comma が無ければ null
+ *
+ * 対応する data 属性（dataset 名）
+ * - data-jpig-rules-comma -> dataset.jpigRulesComma
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {import("../jp-input-guard.js").Rule|null}
+ */
+comma.fromDataset = function fromDataset(dataset, _el) {
+	// ON判定：data-jpig-rules-comma が無ければ対象外
+	if (dataset.jpigRulesComma == null) {
+		return null;
+	}
+	return comma();
+};

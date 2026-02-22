@@ -150,6 +150,34 @@ export function attach(element, options = {}) {
 	return guard.toGuard();
 }
 
+/**
+ * @typedef {Object} GuardGroup
+ * @property {() => void} detach - 全部 detach
+ * @property {() => boolean} isValid - 全部 valid なら true
+ * @property {() => JpigError[]} getErrors - 全部のエラーを集約
+ * @property {() => Guard[]} getGuards - 個別Guard配列
+ */
+
+/**
+ * @param {Iterable<HTMLInputElement|HTMLTextAreaElement>} elements
+ * @param {AttachOptions} [options]
+ * @returns {GuardGroup}
+ */
+export function attachAll(elements, options = {}) {
+	/** @type {Guard[]} */
+	const guards = [];
+	for (const el of elements) {
+		guards.push(attach(el, options));
+	}
+
+	return {
+		detach: () => { for (const g of guards) { g.detach(); } },
+		isValid: () => guards.every((g) => g.isValid()),
+		getErrors: () => guards.flatMap((g) => g.getErrors()),
+		getGuards: () => guards
+	};
+}
+
 class InputGuard {
 	/**
 	 * InputGuard の内部状態を初期化する（DOM/設定/イベント/パイプラインを持つ）

@@ -8,6 +8,8 @@
  *  The MIT license https://opensource.org/licenses/MIT
  */
 
+import { parseDatasetBool } from "./_dataset.js";
+
 /**
  * numeric ルールのオプション
  * @typedef {Object} NumericRuleOptions
@@ -250,3 +252,48 @@ export function numeric(options = {}) {
 		}
 	};
 }
+
+/**
+ * datasetから numeric ルールを生成する
+ * - data-jpig-rules-numeric が無ければ null
+ * - オプションは data-jpig-rules-numeric-xxx から読む
+ *
+ * 対応する data 属性（dataset 名）
+ * - data-jpig-rules-numeric                       -> dataset.jpigRulesNumeric
+ * - data-jpig-rules-numeric-allow-full-width      -> dataset.jpigRulesNumericAllowFullWidth
+ * - data-jpig-rules-numeric-allow-minus           -> dataset.jpigRulesNumericAllowMinus
+ * - data-jpig-rules-numeric-allow-decimal         -> dataset.jpigRulesNumericAllowDecimal
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {import("../jp-input-guard.js").Rule|null}
+ */
+numeric.fromDataset = function fromDataset(dataset, _el) {
+	// ON判定：data-jpig-rules-numeric が無ければ対象外
+	if (dataset.jpigRulesNumeric == null) {
+		return null;
+	}
+
+	/** @type {NumericRuleOptions} */
+	const options = {};
+
+	// allowFullWidth（未指定なら numeric側デフォルト true）
+	const allowFullWidth = parseDatasetBool(dataset.jpigRulesNumericAllowFullWidth);
+	if (allowFullWidth != null) {
+		options.allowFullWidth = allowFullWidth;
+	}
+
+	// allowMinus（未指定なら numeric側デフォルト false）
+	const allowMinus = parseDatasetBool(dataset.jpigRulesNumericAllowMinus);
+	if (allowMinus != null) {
+		options.allowMinus = allowMinus;
+	}
+
+	// allowDecimal（未指定なら numeric側デフォルト false）
+	const allowDecimal = parseDatasetBool(dataset.jpigRulesNumericAllowDecimal);
+	if (allowDecimal != null) {
+		options.allowDecimal = allowDecimal;
+	}
+
+	return numeric(options);
+};

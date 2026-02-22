@@ -7,7 +7,9 @@
  * LICENSE:
  *  The MIT license https://opensource.org/licenses/MIT
  */
+
 /**
+ * @typedef {import("./jp-input-guard.js").GuardGroup} GuardGroup
  * @typedef {import("./jp-input-guard.js").Guard} Guard
  * @typedef {import("./jp-input-guard.js").AttachOptions} AttachOptions
  * @typedef {import("./jp-input-guard.js").Rule} Rule
@@ -99,7 +101,7 @@ export class InputGuardAutoAttach {
 	 * - `data-jpig-*`（設定）と `data-jpig-rules-*`（ルール）を拾って options を生成
 	 *
 	 * @param {Document|DocumentFragment|ShadowRoot|Element} [root=document]
-	 * @returns {Guard[]} attachした Guard の配列
+	 * @returns {GuardGroup}
 	 */
 	autoAttach(root = document) {
 		/** @type {Guard[]} */
@@ -173,6 +175,11 @@ export class InputGuardAutoAttach {
 			el.dataset.jpigAttached = "true";
 		}
 
-		return guards;
+		return {
+			detach: () => { for (const g of guards) { g.detach(); } },
+			isValid: () => guards.every((g) => g.isValid()),
+			getErrors: () => guards.flatMap((g) => g.getErrors()),
+			getGuards: () => guards
+		};
 	}
 }
