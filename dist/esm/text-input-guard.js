@@ -678,9 +678,7 @@ class InputGuard {
 		// 連鎖防止（次の処理に持ち越さない）
 		this.revertRequest = null;
 
-		if (this.warn) {
-			console.log(`[text-input-guard] reverted: ${req.reason}`, req.detail);
-		}
+		if (this.warn) ;
 	}
 
 	/**
@@ -824,7 +822,7 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	onCompositionStart() {
-		console.log("[text-input-guard] compositionstart");
+		// console.log("[text-input-guard] compositionstart");
 		this.composing = true;
 	}
 
@@ -834,7 +832,7 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	onCompositionEnd() {
-		console.log("[text-input-guard] compositionend");
+		// console.log("[text-input-guard] compositionend");
 		this.composing = false;
 
 		// compositionend後に input が来ない環境向けのフォールバック
@@ -854,7 +852,7 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	onInput() {
-		console.log("[text-input-guard] input");
+		// console.log("[text-input-guard] input");
 		// compositionend後に input が来た場合、フォールバックを無効化
 		this.pendingCompositionCommit = false;
 		this.evaluateInput();
@@ -865,7 +863,7 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	onBlur() {
-		console.log("[text-input-guard] blur");
+		// console.log("[text-input-guard] blur");
 		this.evaluateCommit();
 	}
 

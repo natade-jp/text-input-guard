@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8" />
+		<title>TextInputGuard</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 10px;
+			}
+			input {
+				font-size: 18px;
+				padding: 6px 8px;
+				width: 200px;
+			}
+			.is-invalid {
+				border: 2px solid red;
+				background: #fff4f4;
+			}
+			pre {
+				font: 0.5em sans-serif;
+				background: #f5f5f5;
+				margin-top: 10px;
+				margin-bottom: 10px;
+				padding-top: 5px;
+				padding-bottom: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<label>
+			数値入力:
+			<input class="price" type="text" inputmode="decimal" />
+		</label>
+
+		<pre id="output"></pre>
+
+		<script type="module">
+			import { attachAll, rules } from "./lib/text-input-guard.min.js";
+
+			const guards = attachAll(document.querySelectorAll(".price"), {
+				rules: [
+					rules.numeric({ allowFullWidth: true, allowMinus: true, allowDecimal: true }),
+					rules.digits({ int: 6, frac: 2 }),
+					rules.comma()
+				]
+			});
+			const guard = guards.getGuards()[0];
+			const el = guard.getDisplayElement();
+
+			function renderState() {
+				output.textContent = `display value : ${el.value}
+raw value     : ${guard.getRawValue()}
+isValid       : ${guard.isValid()}
+errors        : ${JSON.stringify(guard.getErrors(), null, 2)}`;
+			}
+
+			el.addEventListener("compositionend", renderState);
+			el.addEventListener("input", renderState);
+			el.addEventListener("blur", renderState);
+
+			renderState();
+		</script>
+	</body>
+</html>
