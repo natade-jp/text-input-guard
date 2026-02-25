@@ -7,7 +7,15 @@ export default {
 			{ text: "Home", link: "/" },
 			{ text: "Concept", link: "/concept" },
 			{ text: "Rules", link: "/rules" },
-			{ text: "Demo", link: "/demo" }
-		]
+			{ text: "Demo", link: "/demo" },
+			{ text: "npm", link: "https://www.npmjs.com/package/text-input-guard" }
+		],
+		socialLinks: [
+			{ icon: "github", link: "https://github.com/natade-jp/text-input-guard" }
+		],
+		footer: {
+			message: "Released under MIT License",
+			copyright: "Copyright © 2026 natade-jp"
+		}
 	}
 };
