@@ -1,6 +1,6 @@
 {
 	"name": "text-input-guard",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "A JavaScript input guard library for Japanese web apps, handling full-width digits, numeric rules, digit limits, and formatted display.",
 	"keywords": ["input-validation",
 		"numeric-input",
@@ -33,7 +33,7 @@
 	"bugs": {
 		"url": "https://github.com/natade-jp/text-input-guard/issues"
 	},
-	"homepage": "https://github.com/natade-jp/text-input-guard",
+	"homepage": "https://natade-jp.github.io/text-input-guard/",
 	"files": [
 		"dist/"
 	],
