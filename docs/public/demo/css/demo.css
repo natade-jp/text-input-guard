@@ -1,61 +1,146 @@
-html,
+/* =========================
+   テーマ用カラートークン（ライト）
+   ========================= */
+
+/* :root に定義した変数が基本テーマ（ライト）になる */
+:root {
+	/* ページ全体 */
+	--bg: #ffffff; /* 背景色 */
+	--text: #111111; /* 基本文字色 */
+	--muted: rgba(0, 0, 0, 0.6); /* 補助的な文字色（未使用なら削除可） */
+
+	/* パネル系（pre, .kv など） */
+	--panel-bg: #f5f5f5; /* パネル背景 */
+	--panel-border: #e5e5e5; /* パネル枠線 */
+
+	/* 入力欄 */
+	--input-bg: #ffffff; /* input背景 */
+	--input-border: #cccccc; /* input枠線 */
+
+	/* バリデーションエラー */
+	--invalid-bg: #fff4f4; /* エラー時背景 */
+	--invalid-border: red; /* エラー時枠線 */
+}
+
+/* =========================
+   ダークテーマ用上書き
+   ========================= */
+
+/*
+  親（VitePress）がダークのとき、
+  demo.md 側のスクリプトで iframe 内の body に .dark が付く。
+  そのときだけ変数を書き換える。
+*/
+body.dark {
+	--bg: #1b1b1f;
+	--text: #e8e8e8;
+	--muted: rgba(255, 255, 255, 0.65);
+
+	--panel-bg: #1a1a1a;
+	--panel-border: #333333;
+
+	--input-bg: #141414;
+	--input-border: #3a3a3a;
+
+	--invalid-bg: #2a1414;
+	--invalid-border: #ff6b6b;
+}
+
+/* =========================
+   基本レイアウト
+   ========================= */
+
+html {
+	background: var(--bg);
+}
 body {
 	margin: 0;
-	padding: 10px;
+	padding: 5px;
+	height: 100%;
+	background: var(--bg);
+	color: var(--text);
 }
+
+/* =========================
+   入力欄
+   ========================= */
+
 input {
 	font-size: 18px;
 	padding: 6px 8px;
 	width: 200px;
+
+	background: var(--input-bg);
+	color: var(--text);
+	border: 1px solid var(--input-border);
 }
+
+/* エラー状態（.is-invalid は text-input-guard 側で付与） */
 .is-invalid {
-	border: 2px solid red;
-	background: #fff4f4;
+	border: 2px solid var(--invalid-border);
+	background: var(--invalid-bg);
 }
+
+/* =========================
+   pre 表示
+   ========================= */
+
 pre {
 	font: 0.5em sans-serif;
-	background: #f5f5f5;
+
+	background: var(--panel-bg);
+
 	margin-top: 10px;
 	margin-bottom: 10px;
 	padding-top: 5px;
 	padding-bottom: 5px;
 }
 
+/* =========================
+   キー・バリュー表示ブロック
+   ========================= */
+
 .kv {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 	font-size: 12px;
 	line-height: 1.45;
 
-	background: #f5f5f5;
+	background: var(--panel-bg);
 	padding: 10px 12px;
 	margin: 10px 0;
+
 	border-radius: 8px;
-	border: 1px solid #e5e5e5;
+	border: 1px solid var(--panel-border);
 }
 
+/* 3カラムレイアウト（key : value） */
 .kv .row {
 	display: grid;
-	grid-template-columns: 24ch 2ch 1fr; /* 左列幅。長いなら 28ch とかに */
+	grid-template-columns: 24ch 2ch 1fr; /* 左列幅 */
 	align-items: start;
 }
 
+/* key（左側） */
 .kv .key {
 	opacity: 0.85;
 	white-space: nowrap;
 	overflow: hidden;
-	text-overflow: ellipsis; /* 長すぎるキーは省略して崩れない */
+	text-overflow: ellipsis; /* 長いキーは省略表示 */
 }
 
+/* 区切り（:） */
 .kv .sep {
 	text-align: center;
 	opacity: 0.6;
 }
 
+/* value（右側） */
 .kv .val {
-	white-space: pre-wrap; /* JSONの改行を維持しつつ折り返す */
-	word-break: break-word; /* 長い文字列でもはみ出さない */
+	white-space: pre-wrap; /* 改行を保持 */
+	word-break: break-word; /* 長い文字列で崩れない */
 }
 
+/* 行間調整 */
 .kv .row + .row {
 	margin-top: 4px;
 }

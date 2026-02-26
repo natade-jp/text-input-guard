@@ -1,5 +1,90 @@
 <script setup>
 import { withBase } from 'vitepress'
+import { onMounted, onBeforeUnmount } from 'vue'
+
+let timerId = 0
+let observer = null
+let iframeList = []
+let onIframeLoad = null
+
+function resizeOne(iframe) {
+  const doc = iframe.contentDocument
+  if (!doc) return
+  const h = doc.documentElement.scrollHeight
+
+  const next = Math.max(100, h) + 'px'
+
+  // 無駄な再代入を避ける（ガタつき/レイアウト負荷軽減）
+  if (iframe.style.height !== next) {
+    iframe.style.height = next
+  }
+}
+
+function resizeAll() {
+  for (const iframe of iframeList) {
+    resizeOne(iframe)
+  }
+}
+
+function applyThemeAll() {
+  const isDark = document.documentElement.classList.contains('dark')
+  for (const iframe of iframeList) {
+    const doc = iframe.contentDocument
+    if (!doc?.body) continue
+    doc.body.classList.toggle('dark', isDark)
+  }
+}
+
+onMounted(() => {
+  iframeList = Array.from(document.querySelectorAll('iframe'))
+  if (iframeList.length === 0) return
+
+  // iframe読み込み後に適用（複数iframe対応）
+  onIframeLoad = (e) => {
+    const iframe = e.currentTarget
+    applyThemeAll()
+    resizeOne(iframe)
+  }
+  for (const iframe of iframeList) {
+    iframe.addEventListener('load', onIframeLoad)
+  }
+
+  // 初回（すでに読み込み済みの iframe にも効く）
+  applyThemeAll()
+  resizeAll()
+
+  // VitePressのテーマ変更（html.class）を監視
+  observer = new MutationObserver(() => {
+    applyThemeAll()
+    resizeAll() // テーマ切替で高さが変わることがあるので一応
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  })
+
+  // 中身が動的に変わる場合の追従（不要なら消してOK）
+  timerId = window.setInterval(resizeAll, 500)
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+
+  if (timerId) {
+    clearInterval(timerId)
+    timerId = 0
+  }
+
+  if (onIframeLoad) {
+    for (const iframe of iframeList) {
+      iframe.removeEventListener('load', onIframeLoad)
+    }
+    onIframeLoad = null
+  }
+
+  iframeList = []
+})
 </script>
 
 # Demo
@@ -13,13 +98,18 @@ import { withBase } from 'vitepress'
 
 <iframe
   :src="withBase('/demo/attach-test1.html')"
-  style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 0px;"
+  style="width: 100%; border-style: none;"
 ></iframe>
+
+```html
+<input id="price" type="text" inputmode="decimal" style="text-align: right" />
+```
 
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
+
 const input = document.getElementById("price");
-attach(input, {
+const guard = attach(input, {
 	rules: [
 		rules.numeric({
 			allowFullWidth: true,
@@ -45,11 +135,16 @@ attach(input, {
 
 <iframe
   :src="withBase('/demo/attach-test2.html')"
-  style="width: 100%; height: 240px; border: 1px solid #ddd; border-radius: 0px;"
+  style="width: 100%; border-style: none;"
 ></iframe>
+
+```html
+<input id="price" type="text" inputmode="decimal" style="text-align: right" />
+```
 
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
+
 const input = document.getElementById("price");
 const guard = attach(input, {
 	rules: [
@@ -78,11 +173,16 @@ guard.setValue("123.45");
 
 <iframe
   :src="withBase('/demo/attach-test3.html')"
-  style="width: 100%; height: 240px; border: 1px solid #ddd; border-radius: 0px;"
+  style="width: 100%; border-style: none;"
 ></iframe>
+
+```html
+<input id="price" type="text" inputmode="decimal" style="text-align: right" />
+```
 
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
+
 const input = document.getElementById("price");
 const guard = attach(input, {
 	rules: [
@@ -111,11 +211,16 @@ guard.setValue();
 
 <iframe
   :src="withBase('/demo/attach-all.html')"
-  style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 0px;"
+  style="width: 100%; border-style: none;"
 ></iframe>
+
+```html
+<input class="price" type="text" inputmode="decimal" style="text-align: right" />
+```
 
 ```js
 import { attachAll, rules } from "./lib/text-input-guard.min.js";
+
 const guards = attachAll(document.querySelectorAll(".price"), {
 	rules: [
 		rules.numeric({ allowFullWidth: true, allowMinus: true, allowDecimal: true }),
@@ -132,7 +237,7 @@ const guard = guards.getGuards()[0];
 
 <iframe
   :src="withBase('/demo/auto-attach.html')"
-  style="width: 100%; height: 240px; border: 1px solid #ddd; border-radius: 0px;"
+  style="width: 100%; border-style: none;"
 ></iframe>
 
 ```html
@@ -140,6 +245,7 @@ const guard = guards.getGuards()[0];
 	id="price"
 	type="text"
 	inputmode="decimal"
+	style="text-align: right"
 	data-tig-rules-numeric
 	data-tig-rules-numeric-allow-full-width="true"
 	data-tig-rules-numeric-allow-minus="true"

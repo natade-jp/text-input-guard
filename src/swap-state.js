@@ -114,17 +114,30 @@ export class SwapState {
 			"placeholder",
 			"inputmode",
 			"autocomplete",
-			"required",
 			"minlength",
 			"maxlength",
 			"pattern",
 			"title",
-			"tabindex"
+			"tabindex",
+			"style",
+			"enterkeyhint",
+			"spellcheck"
+		];
+
+		const UI_BOOL_ATTRS = [
+			"required",
+			"readonly",
+			"disabled",
+			"autofocus"
 		];
 
 		for (const name of UI_ATTRS) {
-			this.originalUiAttrs[name] =
-				input.hasAttribute(name) ? input.getAttribute(name) : null;
+			this.originalUiAttrs[name] = input.hasAttribute(name) ? input.getAttribute(name) : null;
+		}
+
+		for (const name of UI_BOOL_ATTRS) {
+			// booleanは「ある/ない」だけ記録
+			this.originalUiAttrs[name] = input.hasAttribute(name) ? "" : null;
 		}
 
 		for (const attr of input.attributes) {
@@ -184,6 +197,7 @@ export class SwapState {
 			if (v == null) {
 				display.removeAttribute(name);
 			} else {
+				// booleanも "" をセットすればOK
 				display.setAttribute(name, v);
 			}
 		}

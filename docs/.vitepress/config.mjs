@@ -16,6 +16,12 @@ export default {
 		footer: {
 			message: "Released under MIT License",
 			copyright: "Copyright © 2026 natade-jp"
+		},
+		outline: {
+			level: [2, 3] // h2 と h3 を表示
+		},
+		search: {
+			provider: "local"
 		}
 	}
 };
