@@ -1,100 +1,26 @@
 <script setup>
-import { withBase } from 'vitepress'
-import { onMounted, onBeforeUnmount } from 'vue'
+import { withBase } from 'vitepress';
+import { useDemoIframes } from './composables/useDemoIframes.js';
 
-let timerId = 0
-let observer = null
-let iframeList = []
-let onIframeLoad = null
-
-function resizeOne(iframe) {
-  const doc = iframe.contentDocument
-  if (!doc) return
-  const h = doc.documentElement.scrollHeight
-
-  const next = Math.max(100, h) + 'px'
-
-  // 無駄な再代入を避ける（ガタつき/レイアウト負荷軽減）
-  if (iframe.style.height !== next) {
-    iframe.style.height = next
-  }
-}
-
-function resizeAll() {
-  for (const iframe of iframeList) {
-    resizeOne(iframe)
-  }
-}
-
-function applyThemeAll() {
-  const isDark = document.documentElement.classList.contains('dark')
-  for (const iframe of iframeList) {
-    const doc = iframe.contentDocument
-    if (!doc?.body) continue
-    doc.body.classList.toggle('dark', isDark)
-  }
-}
-
-onMounted(() => {
-  iframeList = Array.from(document.querySelectorAll('iframe'))
-  if (iframeList.length === 0) return
-
-  // iframe読み込み後に適用（複数iframe対応）
-  onIframeLoad = (e) => {
-    const iframe = e.currentTarget
-    applyThemeAll()
-    resizeOne(iframe)
-  }
-  for (const iframe of iframeList) {
-    iframe.addEventListener('load', onIframeLoad)
-  }
-
-  // 初回（すでに読み込み済みの iframe にも効く）
-  applyThemeAll()
-  resizeAll()
-
-  // VitePressのテーマ変更（html.class）を監視
-  observer = new MutationObserver(() => {
-    applyThemeAll()
-    resizeAll() // テーマ切替で高さが変わることがあるので一応
-  })
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  })
-
-  // 中身が動的に変わる場合の追従（不要なら消してOK）
-  timerId = window.setInterval(resizeAll, 500)
-})
-
-onBeforeUnmount(() => {
-  observer?.disconnect()
-  observer = null
-
-  if (timerId) {
-    clearInterval(timerId)
-    timerId = 0
-  }
-
-  if (onIframeLoad) {
-    for (const iframe of iframeList) {
-      iframe.removeEventListener('load', onIframeLoad)
-    }
-    onIframeLoad = null
-  }
-
-  iframeList = []
-})
+useDemoIframes();
 </script>
 
 # Demo
 
+TextInputGuard の代表的な使い方を、実際に動かしながら確認できます。  
+各デモはそのまま入力して挙動を試せます。
+
 ## attach
 
-### 例1
+単一の入力要素に対してガードを適用します。
 
-全角は半角化、マイナス許可、小数点許可、桁数制限あり。
-制限を超えた場合の入力不可は行わず、エラーとする。
+### 例1：制限超過は「エラーにする（入力は止めない）」
+
+- 全角 → 半角変換
+- マイナス許可
+- 小数点許可
+- 桁数制限あり
+- 制限超過時は入力を止めず、エラー状態にする
 
 <iframe
   :src="withBase('/demo/attach-test1.html')"
@@ -127,11 +53,11 @@ const guard = attach(input, {
 });
 ```
 
-### 例2
+### 例2：制限超過は「入力ブロック」＋初期値設定
 
-全角は半角化、マイナス許可、小数点許可、桁数制限あり。
-制限を超えた場合、入力できないようにする。
-値の初期値を設定。
+- 基本設定は例1と同じ
+- 制限を超えた入力は受け付けない（block）
+- 初期値を設定
 
 <iframe
   :src="withBase('/demo/attach-test2.html')"
@@ -165,11 +91,11 @@ const guard = attach(input, {
 guard.setValue("123.45");
 ```
 
-### 例3
+### 例3：空不可＋小数部を必ず表示
 
-全角は半角化、マイナス不許可、小数点許可、桁数制限あり。
-空は不許可かつ、必ず小数点を付ける。
-値の初期値を設定。
+- マイナス不許可
+- 空入力を許可しない
+- blur時に小数部を必ず付与（forceFracOnBlur）
 
 <iframe
   :src="withBase('/demo/attach-test3.html')"
@@ -207,7 +133,7 @@ guard.setValue();
 
 ## attachAll
 
-`querySelectorAll` で複数の入力項目を同一設定で変更する。
+複数の入力要素に同一設定を適用します。
 
 <iframe
   :src="withBase('/demo/attach-all.html')"
@@ -233,7 +159,7 @@ const guard = guards.getGuards()[0];
 
 ## autoAttach
 
-`autoAttach` で `input` 内の `data` 要素から自動設定。
+`data-tig-*` 属性から自動的にルールを読み取り、ガードを適用します。
 
 <iframe
   :src="withBase('/demo/auto-attach.html')"

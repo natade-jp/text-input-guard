@@ -56,9 +56,12 @@ html {
 body {
 	margin: 0;
 	padding: 5px;
-	height: 100%;
 	background: var(--bg);
 	color: var(--text);
+}
+html,
+body {
+	overflow-y: hidden;
 }
 
 /* =========================
