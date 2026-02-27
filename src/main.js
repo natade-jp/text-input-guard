@@ -17,16 +17,26 @@ import { InputGuardAutoAttach } from "./auto-attach.js";
 import { numeric } from "./rules/numeric.js";
 import { digits } from "./rules/digits.js";
 import { comma } from "./rules/comma.js";
+import { zenkaku } from "./rules/zenkaku.js";
+import { hankaku } from "./rules/hankaku.js";
+import { katakana } from "./rules/katakana.js";
+import { hiragana } from "./rules/hiragana.js";
+import { trim } from "./rules/trim.js";
 
 // ---- individual exports (ESM/CJS) ----
 export { attach, attachAll };
-export { numeric, digits, comma };
+export { numeric, digits, comma, zenkaku, hankaku, katakana, hiragana, trim };
 
 // ---- autoAttach ----
 const auto = new InputGuardAutoAttach(attach, [
 	{ name: "numeric", fromDataset: numeric.fromDataset },
 	{ name: "digits", fromDataset: digits.fromDataset },
-	{ name: "comma", fromDataset: comma.fromDataset }
+	{ name: "comma", fromDataset: comma.fromDataset },
+	{ name: "katakana", fromDataset: katakana.fromDataset },
+	{ name: "hiragana", fromDataset: hiragana.fromDataset },
+	{ name: "zenkaku", fromDataset: zenkaku.fromDataset },
+	{ name: "hankaku", fromDataset: hankaku.fromDataset },
+	{ name: "trim", fromDataset: trim.fromDataset }
 ]);
 
 /**
@@ -41,7 +51,12 @@ export const autoAttach = (root) => auto.autoAttach(root);
 export const rules = {
 	numeric,
 	digits,
-	comma
+	comma,
+	zenkaku,
+	hankaku,
+	katakana,
+	hiragana,
+	trim
 };
 
 /**
