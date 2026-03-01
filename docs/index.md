@@ -20,6 +20,13 @@ hero:
           link: https://github.com/natade-jp/text-input-guard
 ---
 
+<script setup>
+import { withBase } from 'vitepress';
+import { useDemoIframes } from './composables/useDemoIframes.js';
+
+useDemoIframes();
+</script>
+
 TextInputGuard は、日本語入力環境を前提に設計された入力フロー制御ライブラリです。
 
 `<input>` / `<textarea>` に対して、全角混在・桁数制限・小数処理・表示整形など、日本語環境特有の数値入力制御を扱いやすい形で提供します。  
@@ -39,9 +46,14 @@ TextInputGuard は、日本語入力環境を前提に設計された入力フ�
 npm i text-input-guard
 ```
 
-## 30秒で試す（attach）
+## コード
 
-金額入力のよくある構成例です（全角許可・符号/小数OK・桁制御・カンマ表示）。
+金額入力のよくある構成例です（全角許可・符号/小数OK・桁制御・カンマ表示・円マーク表示等）。
+
+<iframe
+  :src="withBase('/demo/demo-index.html')"
+  style="width: 100%; border-style: none;"
+></iframe>
 
 ```js
 import { attach, rules } from "text-input-guard";
@@ -50,19 +62,31 @@ const input = document.querySelector("#price");
 
 const guard = attach(input, {
 	rules: [
-		rules.numeric({ allowFullWidth: true, allowMinus: true, allowDecimal: true }),
+		rules.numeric({
+			allowFullWidth: true,
+			allowMinus: true,
+			allowDecimal: true,
+			allowEmpty: false
+		}),
 		rules.digits({
 			int: 8,
 			frac: 2,
 			overflowInputInt: "block",
 			overflowInputFrac: "block",
-			fixFracOnBlur: "round"
+			fixFracOnBlur: "round",
+			forceFracOnBlur: true
+		}),
+		rules.prefix({
+			text: "¥",
+			showWhenEmpty: true
+		}),
+		rules.suffix({
+			text: " JPY"
 		}),
 		rules.comma()
 	]
 });
 
-// 例：値をセットして確定評価まで実行
 guard.setValue("12345.6");
 ```
 

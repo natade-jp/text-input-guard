@@ -91,7 +91,9 @@ const banner = `/*!
 
 const packageName = "text-input-guard";
 const globalName = "TextInputGuard";
-const input = "./src/main.js";
+const input = "main";
+const inputSrc = `./src/${input}.js`;
+const inputDts = `./tmp/types/${input}.d.ts`;
 
 /** @type {import("rollup").RollupOptions[]} */
 const data = [];
@@ -101,7 +103,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/umd/${packageName}.js`,
 		format: "umd",
 		isUglify: false
@@ -112,7 +114,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/umd/${packageName}.min.js`,
 		format: "umd",
 		isUglify: true
@@ -124,7 +126,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/cjs/${packageName}.cjs`,
 		format: "cjs",
 		isUglify: false
@@ -135,7 +137,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/cjs/${packageName}.min.cjs`,
 		format: "cjs",
 		isUglify: true
@@ -146,7 +148,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/esm/${packageName}.js`,
 		format: "esm",
 		isUglify: false
@@ -157,7 +159,7 @@ data.push(
 	createData({
 		banner,
 		globalName,
-		input,
+		input: inputSrc,
 		outputFile: `./dist/esm/${packageName}.min.js`,
 		format: "esm",
 		isUglify: true
@@ -166,7 +168,7 @@ data.push(
 
 // types
 data.push({
-	input: `./tmp/types/${packageName}.d.ts`,
+	input: inputDts,
 	output: {
 		file: `./dist/types/${packageName}.d.ts`,
 		format: "es"
