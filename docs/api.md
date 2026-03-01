@@ -285,10 +285,26 @@ guard.setValue("", "none");
 
 ## Rules
 
-公開 API は `rules.xxx(...)` です。
-ルールは配列順に実行されます。表示整形系は最後に配置することを推奨します。
+公開されているルール生成関数 `rules.xxx(...)` の仕様（オプション・挙動）をまとめます。
+ルールは **配列順に実行** されます。
 
-### rules.numeric(options?)
+推奨の並び順
+
+- 数値入力: `numeric()` → `digits()` → `comma()` → `prefix()` / `suffix()`
+- 文字列入力: `ascii()` / `kana()` / `trim()` → `filter()`
+
+表示整形系（`comma` / `prefix` / `suffix`）は、基本的に最後に置くのを推奨します。
+
+### 数値向け
+
+金額・数量など「数値として扱う入力」に使用します。
+
+#### `numeric()`
+
+数値入力の土台となるルールです。
+全角→半角変換や、`-` / `.` の構造整理を行います。
+
+例
 
 ```js
 rules.numeric({
@@ -298,14 +314,24 @@ rules.numeric({
 });
 ```
 
-主なオプション
+オプション
 
-- `allowFullWidth` : boolean（default: true）
-- `allowMinus` : boolean（default: false）
-- `allowDecimal` : boolean（default: false）
-- `allowEmpty` : boolean（default: true）
+| option           | type      | default | 説明                               |
+| ---------------- | --------- | ------- | ---------------------------------- |
+| `allowFullWidth` | `boolean` | `true`  | 全角数字・記号を許可し半角へ正規化 |
+| `allowMinus`     | `boolean` | `false` | `-` を許可（先頭のみ）             |
+| `allowDecimal`   | `boolean` | `false` | `.` を許可（1つのみ）              |
+| `allowEmpty`     | `boolean` | `true`  | 空文字を許可する                   |
 
-### rules.digits(options)
+補足
+
+- `allowEmpty: false` の場合、確定時（blur）に空文字が `0` へ補正される想定です（`numeric` の fix フェーズ）。
+
+#### `digits()`
+
+桁数制限・丸め・入力超過時の挙動を制御します。
+
+例
 
 ```js
 rules.digits({
@@ -318,19 +344,135 @@ rules.digits({
 });
 ```
 
-主なオプション
+オプション
 
-- `int` : number
-- `frac` : number
-- `overflowInputInt`
-- `overflowInputFrac`
-- `fixFracOnBlur`
-- `forceFracOnBlur`
+| option              | type                                                     | default  | 説明                                             |
+| ------------------- | -------------------------------------------------------- | -------- | ------------------------------------------------ |
+| `int`               | `number`                                                 | -        | 整数部の最大桁数（省略可）                       |
+| `frac`              | `number`                                                 | -        | 小数部の最大桁数（省略可）                       |
+| `countLeadingZeros` | `boolean`                                                | `false`  | 整数部の先頭ゼロを桁数に含める                   |
+| `overflowInputInt`  | `"block" \| "none"`                                      | `"none"` | 入力中：整数部が最大桁を超える入力をブロックする |
+| `overflowInputFrac` | `"block" \| "none"`                                      | `"none"` | 入力中：小数部が最大桁を超える入力をブロックする |
+| `fixIntOnBlur`      | `"none" \| "truncateLeft" \| "truncateRight" \| "clamp"` | `"none"` | blur時の整数部補正                               |
+| `fixFracOnBlur`     | `"none" \| "truncate" \| "round"`                        | `"none"` | blur時の小数部補正                               |
+| `forceFracOnBlur`   | `boolean`                                                | `false`  | blur時に小数部を必ず表示（`frac` 桁まで0埋め）   |
 
-### rules.comma()
+補足
+
+- `forceFracOnBlur: true` は、`frac` が指定されていることを前提に、小数部を `frac` 桁まで 0 埋めして表示する用途です。
+
+#### `comma()`
+
+整数部に3桁区切りカンマを付与します。
 
 ```js
 rules.comma();
+```
+
+補足
+
+- 確定時（blur）および表示整形フェーズで適用されます。
+- 数値系ルールの最後に配置してください（`prefix` / `suffix` よりは前が基本）。
+
+#### `prefix()`
+
+表示用の先頭文字列を付与します。
+
+```js
+rules.prefix({ text: "¥" });
+```
+
+| option          | type      | default | 説明                 |
+| --------------- | --------- | ------- | -------------------- |
+| `text`          | `string`  | 必須    | 先頭に付ける文字列   |
+| `showWhenEmpty` | `boolean` | `false` | 値が空でも表示するか |
+
+#### `suffix()`
+
+表示用の末尾文字列を付与します。
+
+```js
+rules.suffix({ text: "円" });
+```
+
+| option          | type      | default | 説明                 |
+| --------------- | --------- | ------- | -------------------- |
+| `text`          | `string`  | 必須    | 末尾に付ける文字列   |
+| `showWhenEmpty` | `boolean` | `false` | 値が空でも表示するか |
+
+### 文字列向け
+
+氏名・コード・メモなど「文字列として扱う入力」に使用します。
+
+#### `kana()`
+
+かな文字の正規化を行います。
+
+```js
+rules.kana({
+	target: "katakana-full"
+});
+```
+
+| option   | type                                               | default           | 説明                                                     |
+| -------- | -------------------------------------------------- | ----------------- | -------------------------------------------------------- |
+| `target` | `"katakana-full" \| "katakana-half" \| "hiragana"` | `"katakana-full"` | 統一先                                                   |
+| `nfkc`   | `boolean`                                          | `true`            | 事前に Unicode NFKC 正規化を行う（合体文字などを正規化） |
+
+#### `ascii()`
+
+ASCII範囲へ正規化します（カナは対象外）。
+
+```js
+rules.ascii();
+```
+
+#### `filter()`
+
+許可/禁止文字の制御を行います。
+
+```js
+rules.filter({
+	category: ["digits"],
+	mode: "error"
+});
+```
+
+| option       | type                | default  | 説明                                                            |
+| ------------ | ------------------- | -------- | --------------------------------------------------------------- |
+| `category`   | `FilterCategory[]`  | -        | 許可カテゴリ（配列）                                            |
+| `mode`       | `"drop" \| "error"` | `"drop"` | 不許可文字の扱い（drop: 削除 / error: 削除せずエラーを積む）    |
+| `allow`      | `RegExp \| string`  | -        | 追加で許可する正規表現（1文字にマッチさせる想定）               |
+| `allowFlags` | `string`            | -        | `allow` が文字列のときの flags（`"iu"` など。`g` / `y` は無視） |
+| `deny`       | `RegExp \| string`  | -        | 除外する正規表現（1文字にマッチさせる想定）                     |
+| `denyFlags`  | `string`            | -        | `deny` が文字列のときの flags（`"iu"` など。`g` / `y` は無視）  |
+
+補足（`FilterCategory`）
+
+`category` で指定できる値は次の通りです。
+
+- `"digits"` : ASCII 数字 (`0-9`)
+- `"alpha"` : ASCII 英字 (`A-Z`, `a-z`)
+- `"ascii"` : ASCII 可視文字 (`U+0020–U+007E`)
+- `"hiragana"` : ひらがな (`U+3040–U+309F`)
+- `"katakana-full"` : 全角カタカナ (`U+30A0–U+30FF`)
+- `"katakana-half"` : 半角カタカナ (`U+FF65–U+FF9F`)
+- `"bmp-only"` : BMP のみ許可（`U+0000–U+FFFF`、補助平面禁止）
+- `"sjis-only"` : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
+- `"cp932-only"` : Windows-31J (CP932) でエンコード可能な文字のみ許可
+- `"single-codepoint-only"` : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
+
+運用上の注意
+
+- `allow` / `deny` は「1文字にマッチさせる想定」です。長さをまたぐパターンを入れると意図とズレる可能性があります。
+- `allow` / `deny` を文字列で渡す場合に、flags を分けて指定したいときは `allowFlags` / `denyFlags` を使います（`g` / `y` は無視されます）。
+
+#### `trim()`
+
+前後の空白を削除します。
+
+```js
+rules.trim();
 ```
 
 ## autoAttach 向け data 属性方法
