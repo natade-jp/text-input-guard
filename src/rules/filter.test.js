@@ -49,7 +49,7 @@ test("filter - normalizeChar: mode=drop + category=digits は数字以外を落�
 });
 
 test("filter - normalizeChar: mode=drop + category=alpha は英字以外を落とす", () => {
-	const rule = filter({ mode: "drop", category: ["alpha"] });
+	const rule = filter({ mode: "drop", category: ["alpha-lower", "alpha-upper"] });
 
 	assert.equal(rule.normalizeChar("a1B2c3-", {}), "aBc");
 });
@@ -283,7 +283,7 @@ test("filter - fromDataset: mode/category/allow/deny が反映される（空文
 	const dataset = {
 		tigRulesFilter: "",
 		tigRulesFilterMode: "drop",
-		tigRulesFilterCategory: "digits, alpha, ,invalid",
+		tigRulesFilterCategory: "digits, alpha-lower, alpha-upper, invalid",
 		tigRulesFilterAllow: "   \\.   ", // "." を追加許可（trimされる）
 		tigRulesFilterAllowFlags: " gu ", // g は除去される想定（u は残る）
 		tigRulesFilterDeny: "  a  ", // "a" は除外

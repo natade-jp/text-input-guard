@@ -74,8 +74,22 @@ import { SwapState } from "./swap-state.js";
  * @property {boolean} warn - warnログを出すかどうか
  * @property {string} invalidClass - エラー時に付与するclass名
  * @property {boolean} composing - IME変換中かどうか
+ * @property {string} acceptedValue - 受理済みの値（差分推定・revertの基準）
+ * @property {SelectionState} editSelection - 入力反映直前の選択範囲（beforeinput時点、挿入/置換位置の判定に使用）
+ * @property {string|null} inputType - 直前の入力操作種別（insertText / insertFromPaste / insertCompositionText 等）
+ * @property {string|null} inputData - 直前の入力操作で挿入される文字列（取れない場合あり）
  * @property {(e: TigError) => void} pushError - エラーを登録する関数
+ * @property {(req: SelectionRequest) => void} requestSelection - 選択範囲を変更する要求
  * @property {(req: RevertRequest) => void} requestRevert - 入力を直前の受理値へ巻き戻す要求
+ */
+
+/**
+ * beforeinput で採取する「入力直前スナップショット」
+ * - 入力反映前の状態を保持し、差分判定や挿入位置特定に利用する
+ * @typedef {Object} BeforeInputSnapshot
+ * @property {SelectionState} selection - 入力反映前の選択範囲（挿入/置換位置の判定に使用）
+ * @property {string|null} inputType - 入力種別（insertText / insertFromPaste / deleteContentBackward 等）
+ * @property {string|null} inputData - 挿入された文字列（通常入力時に取得できる場合あり）
  */
 
 /**
@@ -115,6 +129,12 @@ import { SwapState } from "./swap-state.js";
  * @property {number|null} start - selectionStart
  * @property {number|null} end - selectionEnd
  * @property {"forward"|"backward"|"none"|null} direction - selectionDirection
+ */
+
+/**
+ * selection要求（表示要素の選択範囲を変更する指示）
+ * - SelectionState に reason を追加したもの
+ * @typedef {SelectionState & { reason?: string, detail?: any }} SelectionRequest
  */
 
 /**
@@ -335,6 +355,11 @@ class InputGuard {
 		this.onInput = this.onInput.bind(this);
 
 		/**
+		 * beforeinputイベントハンドラ（this固定）
+		 */
+		this.onBeforeInput = this.onBeforeInput.bind(this);
+
+		/**
 		 * blurイベントハンドラ（this固定）
 		 */
 		this.onBlur = this.onBlur.bind(this);
@@ -363,16 +388,29 @@ class InputGuard {
 		this.pendingCompositionCommit = false;
 
 		/**
-		 * 直前に受理した表示値（block時の戻し先）
+		 * 直前に受理した表示値、正しい情報のスナップショットのような情報（block時の戻し先）
 		 * @type {string}
 		 */
 		this.lastAcceptedValue = "";
 
 		/**
-		 *  直前に受理したselection（block時の戻し先）
+		 *  直前に受理したselection、正しい情報のスナップショットのような情報（block時の戻し先）
 		 * @type {SelectionState}
 		 */
 		this.lastAcceptedSelection = { start: null, end: null, direction: null };
+
+		/**
+		 * 入力直前スナップショット（beforeinputで更新）
+		 * length等の「挿入位置優先」ロジックで使用する
+		 * @type {BeforeInputSnapshot|null}
+		 */
+		this.beforeInputSnapshot = null;
+
+		/**
+		 * ルールからの選択範囲変更要求
+		 * @type {SelectionRequest|null}
+		 */
+		this.selectionRequest = null;
 
 		/**
 		 * ルールからのrevert要求
@@ -574,6 +612,7 @@ class InputGuard {
 		this.displayElement.addEventListener("compositionstart", this.onCompositionStart);
 		this.displayElement.addEventListener("compositionend", this.onCompositionEnd);
 		this.displayElement.addEventListener("input", this.onInput);
+		this.displayElement.addEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.addEventListener("blur", this.onBlur);
 
 		// フォーカスで編集用に戻す
@@ -594,6 +633,7 @@ class InputGuard {
 		this.displayElement.removeEventListener("compositionstart", this.onCompositionStart);
 		this.displayElement.removeEventListener("compositionend", this.onCompositionEnd);
 		this.displayElement.removeEventListener("input", this.onInput);
+		this.displayElement.removeEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.removeEventListener("blur", this.onBlur);
 		this.displayElement.removeEventListener("focus", this.onFocus);
 		this.displayElement.removeEventListener("keyup", this.onSelectionChange);
@@ -637,6 +677,12 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtx() {
+		// beforeinput が取れていればそれを優先。無い場合は受理済み値を基準にする
+		const snap = this.beforeInputSnapshot;
+		const editSelection = snap ? snap.selection : this.lastAcceptedSelection;
+		const inputType = snap ? snap.inputType : null;
+		const inputData = snap ? snap.inputData : null;
+
 		return {
 			hostElement: this.hostElement,
 			displayElement: this.displayElement,
@@ -645,7 +691,16 @@ class InputGuard {
 			warn: this.warn,
 			invalidClass: this.invalidClass,
 			composing: this.composing,
+			acceptedValue: this.lastAcceptedValue,
+			editSelection,
+			inputType,
+			inputData,
 			pushError: (e) => this.errors.push(e),
+			requestSelection: (req) => {
+				if (!this.selectionRequest) {
+					this.selectionRequest = req;
+				}
+			},
 			requestRevert: (req) => {
 				// 1回でもrevert要求が出たら採用（最初の理由を保持）
 				if (!this.revertRequest) {
@@ -810,6 +865,23 @@ class InputGuard {
 	}
 
 	/**
+	 * beforeinput：入力が反映される直前に呼ばれる
+	 * - ここでの value/selection が「今回の編集の基準点」になる
+	 * @param {InputEvent} e
+	 * @returns {void}
+	 */
+	onBeforeInput(e) {
+		const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+		// 現時点（反映前）の選択範囲
+		const selection = this.readSelection(el);
+		/** @type {string|null} */
+		const inputType = typeof e.inputType === "string" ? e.inputType : null;
+		/** @type {string|null} */
+		const inputData = typeof e.data === "string" ? e.data : null;
+		this.beforeInputSnapshot = { selection, inputType, inputData };
+	}
+
+	/**
 	 * blurイベント：確定時評価（normalize → validate → fix → format、同期、class更新）
 	 * @returns {void}
 	 */
@@ -911,6 +983,7 @@ class InputGuard {
 		}
 
 		this.clearErrors();
+		this.selectionRequest = null;
 		this.revertRequest = null;
 
 		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
@@ -932,10 +1005,14 @@ class InputGuard {
 		// validate（入力中：エラー出すだけ）
 		this.runValidate(raw, ctx);
 
-		// revert要求が出たら巻き戻して終了
 		if (this.revertRequest) {
+			// revert要求が出たら巻き戻して終了
 			this.revertDisplay(this.revertRequest);
 			return;
+		} else if (this.selectionRequest) {
+			// selection変更要求が出たら反映（blockもここで）
+			const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+			this.writeSelection(display, this.selectionRequest);
 		}
 
 		// rawは常に最新に（swapでも非swapでもOK）
@@ -980,6 +1057,7 @@ class InputGuard {
 			this.revertDisplay(this.revertRequest);
 			return;
 		}
+		// selectionRequest は commit では特に意味がない想定なので無視
 
 		// 4) commitのみの補正（丸め・切り捨て・繰り上がりなど）
 		raw = this.runFix(raw, ctx);

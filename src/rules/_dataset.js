@@ -1,81 +1,109 @@
 /**
- * The script is part of TextInputGuard.
+ * dataset/option の boolean 値を解釈する
+ * - 未指定（null/undefined）の場合は defaultValue を返す
+ * - 空文字 "" は常に true（HTML属性文化）
+ * - 指定があるが解釈できない場合は undefined
  *
- * AUTHOR:
- *  natade-jp (https://github.com/natade-jp)
+ * true  : true / 1 / "true" / "1" / "yes" / "on" / ""
+ * false : false / 0 / "false" / "0" / "no" / "off"
  *
- * LICENSE:
- *  The MIT license https://opensource.org/licenses/MIT
- */
-
-/**
- * datasetのboolean値を解釈する
- * - 未指定なら undefined
- * - "" / "true" / "1" / "yes" / "on" は true
- * - "false" / "0" / "no" / "off" は false
- * @param {string|undefined} v
+ * @param {string|number|boolean|undefined|null} v
+ * @param {boolean} [defaultValue]
  * @returns {boolean|undefined}
  */
-function parseDatasetBool(v) {
-	if (v == null) { return; }
+function parseDatasetBool(v, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
+	if (typeof v === "boolean") { return v; }
+
+	if (typeof v === "number") {
+		if (v === 1) { return true; }
+		if (v === 0) { return false; }
+		return;
+	}
+
 	const s = String(v).trim().toLowerCase();
-	if (s === "" || s === "true" || s === "1" || s === "yes" || s === "on") { return true; }
+
+	// dataset の属性存在を true とみなす（例: data-xxx=""）
+	if (s === "") { return true; }
+
+	if (s === "true" || s === "1" || s === "yes" || s === "on") { return true; }
 	if (s === "false" || s === "0" || s === "no" || s === "off") { return false; }
+
 	return;
 }
 
 /**
- * datasetのnumber値を解釈する（整数想定）
- * - 未指定/空なら undefined
+ * dataset/option の number 値を解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
  * - 数値でなければ undefined
- * @param {string|undefined} v
+ * @param {string|number|undefined|null} v
+ * @param {number} [defaultValue]
  * @returns {number|undefined}
  */
-function parseDatasetNumber(v) {
-	if (v == null) { return; }
+function parseDatasetNumber(v, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
+	if (typeof v === "number") {
+		return Number.isFinite(v) ? v : undefined;
+	}
+
 	const s = String(v).trim();
-	if (s === "") { return; }
+	if (s === "") { return defaultValue; }
+
 	const n = Number(s);
 	return Number.isFinite(n) ? n : undefined;
 }
 
 /**
- * enumを解釈する（未指定なら undefined）
+ * enumを解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
+ * - 値が指定されているが allowed に含まれない場合は undefined を返す
+ *
  * @template {string} T
- * @param {string|undefined} v
+ * @param {string|undefined|null} v
  * @param {readonly T[]} allowed
+ * @param {T} [defaultValue]
  * @returns {T|undefined}
  */
-function parseDatasetEnum(v, allowed) {
-	if (v == null) { return; }
+function parseDatasetEnum(v, allowed, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
 	const s = String(v).trim();
-	if (s === "") { return; }
-	// 大文字小文字を区別したいならここを変える（今は厳密一致）
-	return /** @type {T|undefined} */ (allowed.includes(/** @type {any} */ (s)) ? s : undefined);
+	if (s === "") { return defaultValue; }
+
+	return /** @type {T|undefined} */ (
+		allowed.includes(/** @type {any} */ (s)) ? s : undefined
+	);
 }
 
 /**
- * enum のカンマ区切り複数指定を解釈する（未指定なら undefined）
- * - 未指定なら undefined
+ * enum のカンマ区切り複数指定を解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
  * - 空要素は無視
  * - allowed に含まれないものは除外
  *
- * 例:
- * - "a,b,c" -> ["a","b","c"]（allowed に含まれるもののみ）
- * - "" / "   " -> undefined
- * - "x,y"（どちらも allowed 外）-> []
- *
  * @template {string} T
- * @param {string|undefined} v
+ * @param {string|T[]|undefined|null} v
  * @param {readonly T[]} allowed
+ * @param {T[]} [defaultValue]
  * @returns {T[]|undefined}
  */
-function parseDatasetEnumList(v, allowed) {
-	if (v == null) { return; }
-	const s = String(v).trim();
-	if (s === "") { return; }
+function parseDatasetEnumList(v, allowed, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
 
-	/** @type {string[]} */
+	// JSオプションで配列直渡しも許可
+	if (Array.isArray(v)) {
+		const result = v.filter(
+			/** @returns {x is T} */
+			(x) => allowed.includes(/** @type {any} */ (x))
+		);
+		return result;
+	}
+
+	const s = String(v).trim();
+	if (s === "") { return defaultValue; }
+
 	const list = s
 		.split(",")
 		.map((x) => x.trim())
