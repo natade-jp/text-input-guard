@@ -1412,6 +1412,41 @@ function parseDatasetEnum(v, allowed) {
 }
 
 /**
+ * enum のカンマ区切り複数指定を解釈する（未指定なら undefined）
+ * - 未指定なら undefined
+ * - 空要素は無視
+ * - allowed に含まれないものは除外
+ *
+ * 例:
+ * - "a,b,c" -> ["a","b","c"]（allowed に含まれるもののみ）
+ * - "" / "   " -> undefined
+ * - "x,y"（どちらも allowed 外）-> []
+ *
+ * @template {string} T
+ * @param {string|undefined} v
+ * @param {readonly T[]} allowed
+ * @returns {T[]|undefined}
+ */
+function parseDatasetEnumList(v, allowed) {
+	if (v == null) { return; }
+	const s = String(v).trim();
+	if (s === "") { return; }
+
+	/** @type {string[]} */
+	const list = s
+		.split(",")
+		.map((x) => x.trim())
+		.filter(Boolean);
+
+	const result = list.filter(
+		/** @returns {x is T} */
+		(x) => allowed.includes(/** @type {any} */ (x))
+	);
+
+	return /** @type {T[]} */ (result);
+}
+
+/**
  * The script is part of TextInputGuard.
  *
  * AUTHOR:
@@ -4643,530 +4678,6 @@ class Japanese {
 	}
 
 	/**
-	 * ローマ字からひらがなに変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toHiraganaFromRomaji(text) {
-		/**
-		 * ローマ字から変換マップ
-		 * .y[aiuoe] は除いている
-		 * @type {Object<string, string>}
-		 */
-		// prettier-ignore
-		const map = {
-			a: "あ",
-			i: "い",
-			u: "う",
-			e: "え",
-			o: "お",
-			ka: "か",
-			ki: "き",
-			ku: "く",
-			ke: "け",
-			ko: "こ",
-			ga: "が",
-			gi: "ぎ",
-			gu: "ぐ",
-			ge: "げ",
-			go: "ご",
-			sa: "さ",
-			si: "し",
-			su: "す",
-			se: "せ",
-			so: "そ",
-			za: "ざ",
-			zi: "じ",
-			zu: "ず",
-			ze: "ぜ",
-			zo: "ぞ",
-			ta: "た",
-			ti: "ち",
-			tu: "つ",
-			te: "て",
-			to: "と",
-			da: "だ",
-			di: "ぢ",
-			du: "づ",
-			de: "で",
-			do: "ど",
-			na: "な",
-			ni: "に",
-			nu: "ぬ",
-			ne: "ね",
-			no: "の",
-			ha: "は",
-			hi: "ひ",
-			hu: "ふ",
-			he: "へ",
-			ho: "ほ",
-			ba: "ば",
-			bi: "び",
-			bu: "ぶ",
-			be: "べ",
-			bo: "ぼ",
-			pa: "ぱ",
-			pi: "ぴ",
-			pu: "ぷ",
-			pe: "ぺ",
-			po: "ぽ",
-			ma: "ま",
-			mi: "み",
-			mu: "む",
-			me: "め",
-			mo: "も",
-			ya: "や",
-			yi: "い",
-			yu: "ゆ",
-			ye: "いぇ",
-			yo: "よ",
-			ra: "ら",
-			ri: "り",
-			ru: "る",
-			re: "れ",
-			ro: "ろ",
-			wa: "わ",
-			wi: "うぃ",
-			wu: "う",
-			we: "うぇ",
-			wo: "を",
-			la: "ぁ",
-			li: "ぃ",
-			lu: "ぅ",
-			le: "ぇ",
-			lo: "ぉ",
-			lya: "ゃ",
-			lyi: "ぃ",
-			lyu: "ゅ",
-			lye: "ぇ",
-			lyo: "ょ",
-			ltu: "っ",
-			ltsu: "っ",
-			xa: "ぁ",
-			xi: "ぃ",
-			xu: "ぅ",
-			xe: "ぇ",
-			xo: "ぉ",
-			xya: "ゃ",
-			xyi: "ぃ",
-			xyu: "ゅ",
-			xye: "ぇ",
-			xyo: "ょ",
-			xtu: "っ",
-			xtsu: "っ",
-			// 環境依存をなくすために、SJISにあるカタカナにしています。
-			va: "ヴぁ",
-			vi: "ヴぃ",
-			vu: "ヴ",
-			ve: "ヴぇ",
-			vo: "ヴぉ",
-			qa: "くぁ",
-			qi: "くぃ",
-			qu: "く",
-			qe: "くぇ",
-			qo: "くぉ",
-			qwa: "くぁ",
-			qwi: "くぃ",
-			qwu: "くぅ",
-			qwe: "くぇ",
-			qwo: "くぉ",
-			gwa: "ぐぁ",
-			gwi: "ぐぃ",
-			gwu: "ぐぅ",
-			gwe: "ぐぇ",
-			gwo: "ぐぉ",
-			sha: "しゃ",
-			shi: "し",
-			shu: "しゅ",
-			she: "しぇ",
-			sho: "しょ",
-			swa: "すぁ",
-			swi: "すぃ",
-			swu: "すぅ",
-			swe: "すぇ",
-			swo: "すぉ",
-			cha: "ちゃ",
-			chi: "ち",
-			chu: "ちゅ",
-			che: "ちぇ",
-			cho: "ちょ",
-			tha: "ちゃ",
-			thi: "ち",
-			thu: "てゅ",
-			the: "てぇ",
-			tho: "てょ",
-			tsa: "つぁ",
-			tsi: "つぃ",
-			tsu: "つ",
-			tse: "つぇ",
-			tso: "つぉ",
-			twa: "とぁ",
-			twi: "とぃ",
-			twu: "とぅ",
-			twe: "とぇ",
-			two: "とぉ",
-			fa: "ふぁ",
-			fi: "ふぃ",
-			fu: "ふ",
-			fe: "ふぇ",
-			fo: "ふぉ",
-			fwa: "ふぁ",
-			fwi: "ふぃ",
-			fwu: "ふぅ",
-			fwe: "ふぇ",
-			fwo: "ふぉ",
-			ja: "じゃ",
-			ji: "じ",
-			ju: "じゅ",
-			je: "じぇ",
-			jo: "じょ",
-			n: "ん",
-			nn: "ん",
-			"-": "ー",
-			"?": "？",
-			"!": "！",
-			",": "、",
-			".": "。"
-		};
-		/**
-		 * ya, yi, yu, ye, yo
-		 * @type {Object<string, string>}
-		 */
-		// prettier-ignore
-		const y_komoji_map = {
-			a: "ゃ",
-			i: "ぃ",
-			u: "ゅ",
-			e: "ぇ",
-			o: "ょ"
-		};
-		/**
-		 * @param {string} str
-		 */
-		const func = function (str) {
-			const output = [];
-			let y_komoji = null;
-			let romaji = str.toLowerCase();
-			if (romaji.length > 2) {
-				// 同じ文字の繰り返しなら「っ」に変更
-				if (romaji.charCodeAt(0) === romaji.charCodeAt(1)) {
-					// ただし繰り返し文字がnの場合は「ん」として扱う
-					if (romaji.slice(0, 1) === "n") {
-						output.push("ん");
-						romaji = romaji.slice(2);
-					} else {
-						output.push("っ");
-						romaji = romaji.slice(1);
-					}
-				}
-			}
-			if (romaji.length === 3) {
-				const char_1 = romaji.slice(0, 1);
-				const char_2 = romaji.slice(1, 2);
-				// 2文字目がyで始まる場合（ただし、lya, xya などを除く）は
-				// 小文字リストから選んで、最後に小文字をつける
-				// sya -> si につけかえて辞書から探す
-				if (char_2 === "y" && char_1 !== "l" && char_1 !== "x") {
-					y_komoji = y_komoji_map[romaji.slice(2)];
-					romaji = romaji.slice(0, 1) + "i";
-				}
-			}
-			const data = map[romaji];
-			if (!data) {
-				return str;
-			}
-			output.push(data);
-			if (y_komoji) {
-				output.push(y_komoji);
-			}
-			return output.join("");
-		};
-		/* eslint-disable max-len */
-		// 上から下への優先度で変換する。
-		// ([xl]?[kgsztdnhbpmyrwlxvqfj])(\1)?y?[aiuoe] ... yが入り込む可能性がある文字。前の文字を繰り返して「tta -> った」にも対応。
-		// [xl]?(gw|ch|cch|sh|ssh|ts|tts|th|tth)?[aiuoe] ... yを使用しない文字
-		// nn? ... ん
-		// [?!-] ... 記号
-		// prettier-ignore
-		return (text.replace(/([xl]?[kgsztdnhbpmyrwlxvqfj])(\1)?y?[aiuoe]|[xl]?([gqstf]w|ch|cch|sh|ssh|ts|tts|th|tth)?[aiuoe]|nn?|[?!-.,]/gi, func));
-		/* eslint-enable max-len */
-	}
-
-	/**
-	 * ローマ字からカタカナに変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toKatakanaFromRomaji(text) {
-		return Japanese.toKatakana(Japanese.toHiraganaFromRomaji(text));
-	}
-
-	/**
-	 * ひらがなからローマ字に変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toRomajiFromHiragana(text) {
-		/**
-		 * ひらがなからローマ字への変換マップ
-		 * @type {Object<string, string>}
-		 */
-		// prettier-ignore
-		const map = {
-			あ: "a",
-			い: "i",
-			う: "u",
-			え: "e",
-			お: "o",
-			か: "ka",
-			き: "ki",
-			く: "ku",
-			け: "ke",
-			こ: "ko",
-			が: "ga",
-			ぎ: "gi",
-			ぐ: "gu",
-			げ: "ge",
-			ご: "go",
-			さ: "sa",
-			し: "shi",
-			す: "su",
-			せ: "se",
-			そ: "so",
-			ざ: "za",
-			じ: "ji",
-			ず: "zu",
-			ぜ: "ze",
-			ぞ: "zo",
-			た: "ta",
-			ち: "chi",
-			つ: "tsu",
-			て: "te",
-			と: "to",
-			だ: "da",
-			ぢ: "di",
-			づ: "du",
-			で: "de",
-			ど: "do",
-			な: "na",
-			に: "ni",
-			ぬ: "nu",
-			ね: "ne",
-			の: "no",
-			は: "ha",
-			ひ: "hi",
-			ふ: "fu",
-			へ: "he",
-			ほ: "ho",
-			ば: "ba",
-			び: "bi",
-			ぶ: "bu",
-			べ: "be",
-			ぼ: "bo",
-			ぱ: "pa",
-			ぴ: "pi",
-			ぷ: "pu",
-			ぺ: "pe",
-			ぽ: "po",
-			ま: "ma",
-			み: "mi",
-			む: "mu",
-			め: "me",
-			も: "mo",
-			や: "ya",
-			ゆ: "yu",
-			いぇ: "ye",
-			よ: "yo",
-			ら: "ra",
-			り: "ri",
-			る: "ru",
-			れ: "re",
-			ろ: "ro",
-			わ: "wa",
-			うぃ: "wi",
-			うぇ: "we",
-			うぉ: "wo",
-			を: "wo",
-			ゐ: "wi",
-			ゑ: "we",
-			ん: "n",
-			ぁ: "lya",
-			ぃ: "lyi",
-			ぅ: "lyu",
-			ぇ: "lye",
-			ぉ: "lyo",
-			ゃ: "lya",
-			ゅ: "lyu",
-			ょ: "lyo",
-			// 環境依存をなくすために、SJISにあるカタカナにしています。
-			ヴぁ: "va",
-			ヴぃ: "vi",
-			ヴ: "vu",
-			ヴぇ: "ve",
-			ヴぉ: "vo",
-			ゔぁ: "va",
-			ゔぃ: "vi",
-			ゔ: "vu",
-			ゔぇ: "ve",
-			ゔぉ: "vo",
-			きゃ: "kya",
-			きぃ: "kyi",
-			きゅ: "kyu",
-			きぇ: "kye",
-			きょ: "kyo",
-			ぎゃ: "gya",
-			ぎぃ: "gyi",
-			ぎゅ: "gyu",
-			ぎぇ: "gye",
-			ぎょ: "gyo",
-			くぁ: "qa",
-			くぃ: "qi",
-			くぅ: "qu",
-			くぇ: "qe",
-			くぉ: "qo",
-			ぐぁ: "gwa",
-			ぐぃ: "gwi",
-			ぐぅ: "gwu",
-			ぐぇ: "gwe",
-			ぐぉ: "gwo",
-			しゃ: "sha",
-			// "しぃ" : "shii" ,
-			しゅ: "shu",
-			しぇ: "she",
-			しょ: "sho",
-			じゃ: "ja",
-			// "じぃ" : "jii" ,
-			じゅ: "ju",
-			じぇ: "je",
-			じょ: "jo",
-			ちゃ: "cha",
-			// "ちぃ" : "chii"
-			ちゅ: "chu",
-			ちぇ: "che",
-			ちょ: "cho",
-			つぁ: "tsa",
-			つぃ: "tsi",
-			つぇ: "tse",
-			つぉ: "tso",
-			てぁ: "tha",
-			てぃ: "thi",
-			てゅ: "thu",
-			てぇ: "the",
-			てょ: "tho",
-			にゃ: "nya",
-			にぃ: "nyi",
-			にゅ: "nyu",
-			にぇ: "nye",
-			にょ: "nyo",
-			ひゃ: "hya",
-			ひぃ: "hyi",
-			ひゅ: "hyu",
-			ひぇ: "hye",
-			ひょ: "hyo",
-			びゃ: "bya",
-			びぃ: "byi",
-			びゅ: "byu",
-			びぇ: "bye",
-			びょ: "byo",
-			ぴゃ: "pya",
-			ぴぃ: "pyi",
-			ぴゅ: "pyu",
-			ぴぇ: "pye",
-			ぴょ: "pyo",
-			ふぁ: "fa",
-			ふぃ: "fi",
-			ふぇ: "fe",
-			ふぉ: "fo",
-			みゃ: "mya",
-			みぃ: "myi",
-			みゅ: "myu",
-			みぇ: "mye",
-			みょ: "myo",
-			りゃ: "rya",
-			りぃ: "ryi",
-			りゅ: "ryu",
-			りぇ: "rye",
-			りょ: "ryo",
-			ー: "-",
-			"？": "?",
-			"！": "!",
-			"、": ",",
-			"。": "."
-		};
-
-		/**
-		 * @type {Object<string, string>}
-		 */
-		// prettier-ignore
-		const komoji_map = {
-			ぁ: "la",
-			ぃ: "li",
-			ぅ: "lu",
-			ぇ: "le",
-			ぉ: "lo",
-			ゃ: "lya",
-			ゅ: "lyu",
-			ょ: "lyo"
-		};
-
-		/**
-		 * @param {string} str
-		 */
-		const func = function (str) {
-			let tgt = str;
-			let is_xtu = false;
-			// 1文字目に「っ」があるか
-			if (/^っ/.test(tgt)) {
-				is_xtu = true;
-				tgt = tgt.replace(/^っ*/, "");
-			}
-			// 変換
-			let trans = map[tgt];
-			// 変換に失敗した場合は
-			if (!trans) {
-				if (trans.length === 1) {
-					// 1文字なのでこれ以上変換不能
-					return str;
-				}
-				const char_1 = trans.slice(0, 1);
-				const char_2 = trans.slice(1, 2);
-				// 最後の文字が小文字である
-				if (!komoji_map[char_2]) {
-					// これ以上変換不能
-					return str;
-				}
-				tgt = char_1;
-				const last_text = komoji_map[char_2];
-				// 再度変換テスト
-				trans = map[tgt];
-				if (!trans) {
-					// これ以上変換不能
-					return str;
-				}
-				trans += last_text;
-			}
-			if (is_xtu) {
-				trans = trans.slice(0, 1) + trans;
-			}
-			return trans;
-		};
-		// [っ]*[あいうえおか-ぢつ-もやゆよら-ろわゐゑをんヴ][ぁぃぅぇぉゃゅょ]? ... 促音＋子音母音
-		// [ぁぃぅぇぉゃゅょゎっ] ... 小文字のみ
-		// [？！－。、] ... 記号
-		// prettier-ignore
-		return (text.replace(/[っ]*[あいうえおか-ぢつ-もやゆよら-ろわゐゑをんヴゔ][ぁぃぅぇぉゃゅょ]?|[ぁぃぅぇぉゃゅょゎっ]|[？！－。、]/g, func));
-	}
-
-	/**
-	 * カタカナからローマ字に変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toRomajiFromKatakana(text) {
-		return Japanese.toRomajiFromHiragana(Japanese.toHiragana(text));
-	}
-
-	/**
 	 * 指定したコードポイントの横幅を推定して取得します
 	 * - 0幅 ... グラフェムを構成する要素
 	 *           （結合文字, 異体字セレクタ, スキントーン修飾子,
@@ -5977,42 +5488,6 @@ class Mojix {
 		return Japanese.toFullWidth(text);
 	}
 
-	/**
-	 * ローマ字からひらがなに変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toHiraganaFromRomaji(text) {
-		return Japanese.toHiraganaFromRomaji(text);
-	}
-
-	/**
-	 * ローマ字からカタカナに変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toKatakanaFromRomaji(text) {
-		return Japanese.toKatakanaFromRomaji(text);
-	}
-
-	/**
-	 * ひらがなからローマ字に変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toRomajiFromHiragana(text) {
-		return Japanese.toRomajiFromHiragana(text);
-	}
-
-	/**
-	 * カタカナからローマ字に変換
-	 * @param {string} text - 変換したいテキスト
-	 * @returns {string} 変換後のテキスト
-	 */
-	static toRomajiFromKatakana(text) {
-		return Japanese.toRomajiFromKatakana(text);
-	}
-
 	// ---------------------------------
 	// 1つの文字データに対して調査を行う
 	// ---------------------------------
@@ -6145,25 +5620,13 @@ kana.fromDataset = function fromDataset(dataset, _el) {
 
 
 /**
- * ascii ルールのオプション
- * @typedef {Object} AsciiRuleOptions
- * @property {boolean} [nfkc=true] - 事前に Unicode NFKC 正規化を行う
- */
-
-/**
  * ascii ルールを生成する
  * - 全角英数字・記号・全角スペースを半角へ正規化する
  * - カナは変換しない
  *
- * @param {AsciiRuleOptions} [options]
  * @returns {Rule}
  */
-function ascii(options = {}) {
-	/** @type {AsciiRuleOptions} */
-	const opt = {
-		nfkc: options.nfkc ?? true
-	};
-
+function ascii() {
 	return {
 		name: "ascii",
 		targets: ["input", "textarea"],
@@ -6175,19 +5638,8 @@ function ascii(options = {}) {
 		 * @returns {string}
 		 */
 		normalizeChar(value, ctx) {
-			let s = String(value);
-
-			if (opt.nfkc) {
-				try {
-					s = s.normalize("NFKC");
-				} catch {
-					// noop
-				}
-			}
-
-			s = Mojix.toHalfWidthAsciiCode(s);
-
-			return s;
+			const s = String(value);
+			return Mojix.toHalfWidthAsciiCode(s);
 		}
 	};
 }
@@ -6197,7 +5649,6 @@ function ascii(options = {}) {
  *
  * 対応する data 属性
  * - data-tig-rules-ascii
- * - data-tig-rules-ascii-nfkc
  *
  * @param {DOMStringMap} dataset
  * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -6207,16 +5658,426 @@ ascii.fromDataset = function fromDataset(dataset, _el) {
 	if (dataset.tigRulesAscii == null) {
 		return null;
 	}
+	return ascii();
+};
 
-	/** @type {AsciiRuleOptions} */
-	const options = {};
+/* eslint-disable max-len */
+/**
+ * The script is part of TextInputGuard.
+ *
+ * AUTHOR:
+ *  natade-jp (https://github.com/natade-jp)
+ *
+ * LICENSE:
+ *  The MIT license https://opensource.org/licenses/MIT
+ */
 
-	const nfkc = parseDatasetBool(dataset.tigRulesAsciiNfkc);
-	if (nfkc != null) {
-		options.nfkc = nfkc;
+
+/**
+ * filter ルールのカテゴリ名
+ *
+ * - "digits"         : ASCII 数字 (0-9)
+ * - "alpha"          : ASCII 英字 (A-Z, a-z)
+ * - "ascii"          : ASCII 可視文字 (U+0020–U+007E)
+ * - "hiragana"       : ひらがな (U+3040–U+309F)
+ * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
+ * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
+ * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、補助平面禁止）
+ * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
+ * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
+ * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
+ *
+ * @typedef {"digits"|"alpha"|"ascii"|"hiragana"|"katakana-full"|"katakana-half"|"bmp-only"|"sjis-only"|"cp932-only"|"single-codepoint-only"} FilterCategory
+ */
+
+/**
+ * グラフェム（1グラフェムは、UTF-32の配列）
+ * @typedef {number[]} Grapheme
+ */
+
+/** @type {readonly FilterCategory[]} */
+const FILTER_CATEGORIES = [
+	"digits",
+	"alpha",
+	"ascii",
+	"hiragana",
+	"katakana-full",
+	"katakana-half",
+	"bmp-only",
+	"sjis-only",
+	"cp932-only",
+	"single-codepoint-only"
+];
+
+/**
+ * filter ルールの動作モード
+ * @typedef {"drop"|"error"} FilterMode
+ */
+
+/**
+ * filter ルールのオプション
+ * - category は和集合で扱う（複数指定OK）
+ * - allow は追加許可（和集合）
+ * - deny は除外（差集合）
+ *
+ * allowed = (category の和集合 ∪ allow) − deny
+ *
+ * @typedef {Object} FilterRuleOptions
+ * @property {FilterMode} [mode="drop"] - drop: 不要文字を削除 / error: 削除せずエラーを積む
+ * @property {FilterCategory[]} [category] - カテゴリ（配列）
+ * @property {RegExp|string} [allow] - 追加で許可する正規表現（1文字にマッチさせる想定）
+ * @property {string} [allowFlags] - allow が文字列のときの flags（"iu" など。g/y は無視）
+ * @property {RegExp|string} [deny] - 除外する正規表現（1文字にマッチさせる想定）
+ * @property {string} [denyFlags] - deny が文字列のときの flags（"iu" など。g/y は無視）
+ */
+
+/**
+ * /g や /y は lastIndex の罠があるので除去して使う
+ * @param {string} flags
+ * @returns {string}
+ */
+const stripStatefulFlags = function (flags) {
+	return String(flags || "").replace(/[gy]/g, "");
+};
+
+/**
+ * 正規表現（RegExp または pattern 文字列）を安全に RegExp 化する
+ * - g/y を外す
+ * - string の場合、flags 未指定なら "u" を付ける
+ *
+ * @param {RegExp|string|undefined} reOrPattern
+ * @param {string|undefined} flags
+ * @returns {RegExp|undefined}
+ */
+const toSafeRegExp = function (reOrPattern, flags) {
+	if (reOrPattern == null) {
+		return;
 	}
 
-	return ascii(options);
+	if (reOrPattern instanceof RegExp) {
+		const safeFlags = stripStatefulFlags(reOrPattern.flags);
+		return new RegExp(reOrPattern.source, safeFlags);
+	}
+
+	const f = stripStatefulFlags(flags ?? "u");
+	return new RegExp(String(reOrPattern), f);
+};
+
+/**
+ * カテゴリ判定関数を作る
+ * @param {FilterCategory[]} categories
+ * @returns {(g: Grapheme, s: string) => boolean}
+ */
+const createCategoryTester = function (categories) {
+	/** @type {Record<FilterCategory, (g: Grapheme, s: string) => boolean>} */
+	const table = {
+		digits: (g, s) => {
+			return g.length === 1 && g[0] >= 0x30 && g[0] <= 0x39; // '0'..'9'
+		},
+		alpha: (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			// 'A'..'Z' or 'a'..'z'
+			return (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
+		},
+		ascii: (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			return c >= 0x20 && c <= 0x7E;
+		},
+		hiragana: (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			return c >= 0x3040 && c <= 0x309F;
+		},
+		"katakana-full": (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			return c >= 0x30A0 && c <= 0x30FF;
+		},
+		"katakana-half": (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			return c >= 0xFF65 && c <= 0xFF9F;
+		},
+		"bmp-only": (g, s) => {
+			// BMPのみ（サロゲートペア禁止）
+			return g.every((cp) => cp <= 0xFFFF);
+		},
+		"sjis-only": (g, s) => {
+			// Shift_JIS でエンコードできる文字かどうか
+			if (g.length !== 1) { return false; }
+			const cp932code = CP932.toCP932FromUnicode(g[0]);
+			if (cp932code === undefined) { return false; }
+			const kuten = SJIS.toKuTenFromSJISCode(cp932code);
+			if (cp932code < 0x100) {
+				return true;
+			}
+			if (!SJIS.isRegularMenKuten(kuten)) { return false; }
+			return kuten.ku <= 94;
+		},
+		"cp932-only": (g, s) => {
+			// Windows-31J (cp932) でエンコードできる文字かどうか
+			if (g.length !== 1) { return false; }
+			return CP932.toCP932FromUnicode(g[0]) !== undefined;
+		},
+		"single-codepoint-only": (g, s) => {
+			// 1グラフェムが単一コードポイントのみで構成されていること
+			return g.length === 1;
+		}
+	};
+
+	// categories は「和集合」なので、該当する tester だけ抜いて使う
+	const list = categories.map((c) => table[c]).filter(Boolean);
+
+	if (list.length === 0) {
+		return function () {
+			return false;
+		};
+	}
+
+	return function (g, s) {
+		for (const test of list) {
+			if (test(g, s)) {
+				return true;
+			}
+		}
+		return false;
+	};
+};
+
+/**
+ * 1文字が許可されるか判定する関数を作る
+ * @param {FilterCategory[]} categoryList
+ * @param {(graphem: Grapheme, s: string) => boolean} categoryTest
+ * @param {RegExp|undefined} allowRe
+ * @param {RegExp|undefined} denyRe
+ * @returns {(g: Grapheme, s: string) => boolean}
+ */
+const createAllowedTester = function (categoryList, categoryTest, allowRe, denyRe) {
+	const hasCategory = categoryList.length > 0;
+	const hasAllow = allowRe != null;
+	const hasDeny = denyRe != null;
+
+	// deny だけの指定は「deny に当たる文字だけ落とす」ルールとして扱う
+	const denyOnly = !hasCategory && !hasAllow && hasDeny;
+
+	return function (g, s) {
+		if (denyRe && denyRe.test(s)) {
+			return false;
+		}
+
+		if (denyOnly) {
+			return true;
+		}
+
+		if (hasCategory && categoryTest(g, s)) {
+			return true;
+		}
+		if (allowRe && allowRe.test(s)) {
+			return true;
+		}
+
+		return false;
+	};
+};
+
+/**
+ * 文字列を走査して、許可文字のみの文字列と、不正文字の集計を返す
+ * @param {string} value
+ * @param {(g: Grapheme, s: string) => boolean} isAllowed
+ * @param {number} [maxInvalidChars=20]
+ * @returns {{ filtered: string, invalidCount: number, invalidChars: string[] }}
+ */
+const scanByAllowed = function (value, isAllowed, maxInvalidChars = 20) {
+	const v = String(value);
+
+	let filtered = "";
+	let invalidCount = 0;
+
+	/** @type {Set<string>} */
+	const invalidSet = new Set();
+
+	/**
+	 * グラフェムの配列
+	 * @type {Grapheme[]}
+	 */
+	const graphemArray = Mojix.toMojiArrayFromString(v);
+
+	// JS の文字列イテレータはコードポイント単位で回るので Array.from は不要
+	for (const g of graphemArray) {
+		const s = Mojix.toStringFromMojiArray([g]);
+		if (isAllowed(g, s)) {
+			filtered += s;
+		} else {
+			invalidCount++;
+			if (invalidSet.size < maxInvalidChars) {
+				invalidSet.add(s);
+			}
+		}
+	}
+
+	return {
+		filtered,
+		invalidCount,
+		invalidChars: Array.from(invalidSet)
+	};
+};
+
+/**
+ * filter ルールを生成する
+ * - mode="drop": 不要文字を落とすだけ
+ * - mode="error": 文字は落とさず validate でエラーを積む
+ *
+ * @param {FilterRuleOptions} [options]
+ * @returns {Rule}
+ */
+function filter(options = {}) {
+	/** @type {FilterRuleOptions} */
+	const opt = {
+		mode: options.mode ?? "drop",
+		category: options.category ?? [],
+		allow: options.allow,
+		allowFlags: options.allowFlags,
+		deny: options.deny,
+		denyFlags: options.denyFlags
+	};
+
+	const categoryList = opt.category;
+	const categoryTest = createCategoryTester(categoryList);
+
+	const allowRe = toSafeRegExp(opt.allow, opt.allowFlags);
+	const denyRe = toSafeRegExp(opt.deny, opt.denyFlags);
+
+	const isAllowed = createAllowedTester(categoryList, categoryTest, allowRe, denyRe);
+
+	const hasAny = categoryList.length > 0 || allowRe != null || denyRe != null;
+
+	return {
+		name: "filter",
+		targets: ["input", "textarea"],
+
+		/**
+		 * 許可集合で落とす（drop モードのみ）
+		 * @param {string} value
+		 * @param {GuardContext} ctx
+		 * @returns {string}
+		 */
+		normalizeChar(value, ctx) {
+			if (!hasAny) {
+				return value;
+			}
+
+			// error モードは何も落とさない（全て通す）
+			if (opt.mode === "error") {
+				return value;
+			}
+
+			return scanByAllowed(value, isAllowed).filtered;
+		},
+
+		/**
+		 * 不正文字が含まれていたらエラーを積む（error モードのみ）
+		 * @param {string} value
+		 * @param {GuardContext} ctx
+		 * @returns {void}
+		 */
+		validate(value, ctx) {
+			if (!hasAny) {
+				return;
+			}
+			if (opt.mode !== "error") {
+				return;
+			}
+
+			const v = String(value);
+			if (v === "") {
+				return;
+			}
+
+			const r = scanByAllowed(v, isAllowed);
+			if (r.invalidCount > 0) {
+				ctx.pushError({
+					code: "filter.invalid_char",
+					rule: "filter",
+					phase: "validate",
+					detail: {
+						count: r.invalidCount,
+						chars: r.invalidChars,
+						category: categoryList,
+						hasAllow: allowRe != null,
+						hasDeny: denyRe != null
+					}
+				});
+			}
+		}
+	};
+}
+
+/**
+ * datasetから filter ルールを生成する
+ * - data-tig-rules-filter が無ければ null
+ *
+ * 対応する data 属性（dataset 名）
+ * - data-tig-rules-filter               -> dataset.tigRulesFilter
+ * - data-tig-rules-filter-mode          -> dataset.tigRulesFilterMode ("drop"|"error")
+ * - data-tig-rules-filter-category      -> dataset.tigRulesFilterCategory ("a,b,c")
+ * - data-tig-rules-filter-allow         -> dataset.tigRulesFilterAllow
+ * - data-tig-rules-filter-allow-flags   -> dataset.tigRulesFilterAllowFlags
+ * - data-tig-rules-filter-deny          -> dataset.tigRulesFilterDeny
+ * - data-tig-rules-filter-deny-flags    -> dataset.tigRulesFilterDenyFlags
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {Rule|null}
+ */
+filter.fromDataset = function fromDataset(dataset, _el) {
+	if (dataset.tigRulesFilter == null) {
+		return null;
+	}
+
+	/** @type {FilterRuleOptions} */
+	const options = {};
+
+	const mode = parseDatasetEnum(dataset.tigRulesFilterMode, ["drop", "error"]);
+	if (mode != null) {
+		options.mode = mode;
+	}
+
+	const category = parseDatasetEnumList(dataset.tigRulesFilterCategory, FILTER_CATEGORIES);
+	if (category != null) {
+		options.category = category;
+	}
+
+	if (dataset.tigRulesFilterAllow != null) {
+		const s = String(dataset.tigRulesFilterAllow).trim();
+		if (s !== "") {
+			options.allow = s;
+		}
+	}
+
+	if (dataset.tigRulesFilterAllowFlags != null) {
+		const s = String(dataset.tigRulesFilterAllowFlags).trim();
+		if (s !== "") {
+			options.allowFlags = s;
+		}
+	}
+
+	if (dataset.tigRulesFilterDeny != null) {
+		const s = String(dataset.tigRulesFilterDeny).trim();
+		if (s !== "") {
+			options.deny = s;
+		}
+	}
+
+	if (dataset.tigRulesFilterDenyFlags != null) {
+		const s = String(dataset.tigRulesFilterDenyFlags).trim();
+		if (s !== "") {
+			options.denyFlags = s;
+		}
+	}
+
+	return filter(options);
 };
 
 /**
@@ -6477,6 +6338,7 @@ const auto = new InputGuardAutoAttach(attach, [
 	{ name: "comma", fromDataset: comma.fromDataset },
 	{ name: "kana", fromDataset: kana.fromDataset },
 	{ name: "ascii", fromDataset: ascii.fromDataset },
+	{ name: "filter", fromDataset: filter.fromDataset },
 	{ name: "prefix", fromDataset: prefix.fromDataset },
 	{ name: "suffix", fromDataset: suffix.fromDataset },
 	{ name: "trim", fromDataset: trim.fromDataset }
@@ -6497,6 +6359,7 @@ const rules = {
 	comma,
 	kana,
 	ascii,
+	filter,
 	prefix,
 	suffix,
 	trim
@@ -6516,6 +6379,7 @@ exports.attachAll = attachAll;
 exports.autoAttach = autoAttach;
 exports.comma = comma;
 exports.digits = digits;
+exports.filter = filter;
 exports.kana = kana;
 exports.numeric = numeric;
 exports.prefix = prefix;

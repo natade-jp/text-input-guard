@@ -19,7 +19,7 @@ export default {
 			copyright: "Copyright © 2026 natade-jp"
 		},
 		outline: {
-			level: [2, 3] // h2 と h3 を表示
+			level: [2, 4] // h2...h4 を表示
 		},
 		search: {
 			provider: "local"

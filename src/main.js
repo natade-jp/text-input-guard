@@ -19,13 +19,13 @@ import { digits } from "./rules/digits.js";
 import { comma } from "./rules/comma.js";
 import { kana } from "./rules/kana.js";
 import { ascii } from "./rules/ascii.js";
+import { filter } from "./rules/filter.js";
 import { prefix } from "./rules/prefix.js";
 import { suffix } from "./rules/suffix.js";
 import { trim } from "./rules/trim.js";
 
 // ---- individual exports (ESM/CJS) ----
-export { attach, attachAll };
-export { numeric, digits, comma, kana, ascii, prefix, suffix, trim };
+export { attach, attachAll, numeric, digits, comma, kana, ascii, filter, prefix, suffix, trim };
 
 // ---- autoAttach ----
 const auto = new InputGuardAutoAttach(attach, [
@@ -34,6 +34,7 @@ const auto = new InputGuardAutoAttach(attach, [
 	{ name: "comma", fromDataset: comma.fromDataset },
 	{ name: "kana", fromDataset: kana.fromDataset },
 	{ name: "ascii", fromDataset: ascii.fromDataset },
+	{ name: "filter", fromDataset: filter.fromDataset },
 	{ name: "prefix", fromDataset: prefix.fromDataset },
 	{ name: "suffix", fromDataset: suffix.fromDataset },
 	{ name: "trim", fromDataset: trim.fromDataset }
@@ -54,6 +55,7 @@ export const rules = {
 	comma,
 	kana,
 	ascii,
+	filter,
 	prefix,
 	suffix,
 	trim

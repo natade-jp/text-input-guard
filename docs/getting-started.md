@@ -1,196 +1,91 @@
----
-layout: home
+# Getting Started
 
-hero:
-    name: TextInputGuard
-    text: 入力フロー設計ライブラリ
-    tagline: 日本語入力環境に最適化されたテキスト入力ガード
-    actions:
-        - theme: brand
-          text: Get Started
-          link: /concept
-        - theme: alt
-          text: Demo
-          link: /demo
-        - theme: alt
-          text: GitHub
-          link: https://github.com/natade-jp/text-input-guard
----
+TextInputGuard を最短で使い始めるためのガイドです。
+まずは「動かす」ことを目的に、必要最小限の手順だけを紹介します。
 
-TextInputGuard は、日本語入力環境を前提に設計された入力フロー制御ライブラリです。
-
-`<input>` / `<textarea>` に対して、全角混在・桁数制限・小数処理・表示整形など、日本語環境特有の数値入力制御を扱いやすい形で提供します。
-
-業務系フォームや金額入力など、IMEの影響を受けやすい入力欄でも、表示用の値と送信用の値を分離しながら安定した制御を行えます。
-
-## 特徴
-
-- 全角数字・記号の自動正規化（全角 → 半角）
-- 整数部／小数部の桁数制御
-- 入力時ブロックと確定時補正の選択
-- 表示値と送信用値の分離
-- data属性からの自動適用対応
-
-## インストール
+## 1. インストール
 
 ```bash
 npm i text-input-guard
 ```
 
-## 使い方
+## 2. 最小構成（attach）
 
-### 1) attach（単一要素に適用）
+最も基本的な使い方です。
+1つの `<input>` に対してガードを適用します。
 
-最も基本的な使い方です。1つの要素に対してガードを適用します。
+```html
+<input id="price" type="text" inputmode="decimal" />
+```
 
 ```js
 import { attach, rules } from "text-input-guard";
 
-const input = document.querySelector("#price");
+const input = document.getElementById("price");
 
-const guard = attach(input, {
+attach(input, {
+	rules: [rules.numeric()]
+});
+```
+
+これだけで次の制御が有効になります。
+
+- 全角数字 → 半角へ正規化
+- 不要な文字の除去
+- IMEと共存した入力制御
+
+## 3. よくある金額入力の例
+
+実務でよくある金額入力の構成例です。
+
+- 全角入力を許可
+- マイナス許可
+- 小数点許可
+- 整数8桁、小数2桁まで
+- カンマ表示
+
+```js
+import { attach, rules } from "text-input-guard";
+
+const input = document.getElementById("price");
+
+attach(input, {
 	rules: [
-		rules.numeric({ allowFullWidth: true, allowMinus: true, allowDecimal: true }),
+		rules.numeric({
+			allowFullWidth: true,
+			allowMinus: true,
+			allowDecimal: true
+		}),
 		rules.digits({
-			int: 6,
+			int: 8,
 			frac: 2,
 			overflowInputInt: "block",
-			overflowInputFrac: "block",
-			fixFracOnBlur: "round"
+			overflowInputFrac: "block"
 		}),
 		rules.comma()
 	]
 });
 ```
 
-### Guard API
+入力中はUXを壊さず、
+確定時（blur）に補正や表示整形が行われます。
 
-`attach()` が返す `Guard` は、利用者が触れる公開インターフェースです。
+## 4. autoAttach（HTMLだけで設定）
 
-#### 解除・エラー確認・値取得
-
-- `detach()`
-  ガード解除（イベント削除・swap復元）
-
-- `isValid()`
-  現在エラーが無いかどうか
-
-- `getErrors()`
-  エラー一覧を取得
-
-- `getRawValue()`
-  送信用の正規化済み値を取得（表示整形は含まれません）
-
-- `getDisplayValue()`
-  ユーザーが実際に操作している表示値を取得
-
-- `getRawElement()`
-  送信用の正規化済み値を保持する要素を取得
-
-- `getDisplayElement()`
-  ユーザーが実際に操作している要素を取得
-  swap構成時は表示専用要素になります
-
-例：
-
-```js
-if (!guard.isValid()) {
-	console.log(guard.getErrors());
-}
-
-const raw = guard.getRawValue();
-const display = guard.getDisplayValue();
-```
-
-#### 手動評価・値設定
-
-外部から値を変更した場合や、blurせずに確定処理を行いたい場合のために、以下のメソッドが利用できます。
-
-- `evaluate()`
-  入力中評価を手動実行します
-  `normalize → validate` を実行します
-
-- `commit()`
-  確定評価を手動実行します
-  `normalize → validate → fix → format` を実行します
-  blur相当の処理です
-
-- `setValue(value, mode?)`
-  表示値をプログラムから設定します
-    - `value`
-      `string | number | null | undefined` を指定できます
-      `null / undefined` は空文字として扱われます
-
-    - `mode`
-      `"none" | "input" | "commit"`
-      既定値は `"commit"`
-        - `"commit"`
-          値を設定後、確定評価まで実行します
-        - `"input"`
-          値を設定後、入力中評価のみ実行します
-        - `"none"`
-          評価は実行せず、値のみを反映します
-
-例：
-
-```js
-// 値を設定して確定評価まで実行（既定は commit）
-guard.setValue(1234);
-
-// 入力中評価のみ
-guard.setValue("0012", "input");
-
-// 値だけ変更（評価なし）
-guard.setValue("", "none");
-
-// 手動で確定評価だけ実行
-guard.commit();
-
-// 入力中評価だけ実行
-guard.evaluate();
-```
-
-### 2) attachAll（複数要素にまとめて適用）
-
-`querySelectorAll()` の戻り値に対してまとめて適用できます。
-
-```js
-import { attachAll, rules } from "text-input-guard";
-
-const group = attachAll(document.querySelectorAll(".tig-price"), {
-	rules: [
-		rules.numeric({ allowFullWidth: true, allowMinus: true, allowDecimal: true }),
-		rules.digits({ int: 6, frac: 2 }),
-		rules.comma()
-	]
-});
-```
-
-`attachAll()` は `GuardGroup` を返します。
-
-- `detach()`：全て解除
-- `isValid()`：全て valid なら true
-- `getErrors()`：全てのエラーを集約
-- `getGuards()`：個別の `Guard[]` を取得
-
-### 3) autoAttach（data属性から自動適用）
-
-HTML側に `data-tig-*` を定義し、JS側で `autoAttach()` を呼ぶだけで適用できます。
+`data-tig-*` 属性から自動的にルールを読み取り、適用できます。
 
 ```html
 <input
-	class="price"
-	name="price"
+	id="price"
+	type="text"
+	inputmode="decimal"
 	data-tig-rules-numeric
 	data-tig-rules-numeric-allow-full-width="true"
 	data-tig-rules-numeric-allow-minus="true"
 	data-tig-rules-numeric-allow-decimal="true"
 	data-tig-rules-digits
-	data-tig-rules-digits-int="6"
+	data-tig-rules-digits-int="8"
 	data-tig-rules-digits-frac="2"
-	data-tig-rules-digits-overflow-input-int="block"
-	data-tig-rules-digits-overflow-input-frac="block"
-	data-tig-rules-digits-fix-frac-on-blur="round"
 	data-tig-rules-comma
 />
 ```
@@ -198,32 +93,28 @@ HTML側に `data-tig-*` を定義し、JS側で `autoAttach()` を呼ぶだけ�
 ```js
 import { autoAttach } from "text-input-guard";
 
-const guards = autoAttach();
-
-// 動的追加したコンテナだけ適用する場合
-// autoAttach(container);
+autoAttach();
 ```
 
-`autoAttach()` は attach した `GuardGroup` を返します。
+ページ読み込み時に対象要素へ自動適用されます。
 
-- 既に `data-tig-attached` が付いている要素はスキップします
-- `data-tig-rules-*` を読み取り、内部で `rules` に変換します
+## 5. 値の取得とバリデーション
 
-## ルール
+`attach()` が返す `Guard` から状態を取得できます。
 
-公開API：`rules.xxx(...)`
+```js
+const guard = attach(input, { rules: [rules.numeric()] });
 
-- `rules.numeric(...)`
-  数値入力の正規化（全角 → 半角、記号統一、不要文字除去）
+if (!guard.isValid()) {
+	console.log(guard.getErrors());
+}
 
-- `rules.digits(...)`
-  整数部／小数部の桁数制御、入力ブロック、確定時補正
+const rawValue = guard.getRawValue(); // 送信用の値
+const displayValue = guard.getDisplayValue(); // 表示中の値
+```
 
-- `rules.comma()`
-  確定時のカンマ付与（表示整形）
+## 次に読む
 
-※ルールは配列順に実行されます。表示整形系は最後に配置することを推奨します。
-
-## License
-
-MIT
+- 詳細なAPI仕様 → [API](/api)
+- 実際の挙動を確認 → [Demo](/demo)
+- 設計思想や拡張方法 → [Advanced](/advanced)
