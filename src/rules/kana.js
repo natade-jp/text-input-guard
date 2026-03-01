@@ -54,10 +54,13 @@ export function kana(options = {}) {
 			}
 			s = Mojix.toKatakana(s);
 			if (opt.target === "katakana-full") {
+				s = Mojix.toFullWidthSpace(s);
 				s = Mojix.toFullWidthKana(s);
 			} else if (opt.target === "katakana-half") {
+				s = Mojix.toHalfWidthSpace(s);
 				s = Mojix.toHalfWidthKana(s);
 			} else {
+				s = Mojix.toFullWidthSpace(s);
 				s = Mojix.toFullWidthKana(s);
 				s = Mojix.toHiragana(s);
 			}

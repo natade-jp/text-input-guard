@@ -1,6 +1,6 @@
 {
 	"name": "text-input-guard",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "A JavaScript input guard library for Japanese web apps, handling full-width digits, numeric rules, digit limits, and formatted display.",
 	"keywords": ["input-validation",
 		"numeric-input",

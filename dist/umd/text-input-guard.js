@@ -5560,10 +5560,13 @@
 				}
 				s = Mojix.toKatakana(s);
 				if (opt.target === "katakana-full") {
+					s = Mojix.toFullWidthSpace(s);
 					s = Mojix.toFullWidthKana(s);
 				} else if (opt.target === "katakana-half") {
+					s = Mojix.toHalfWidthSpace(s);
 					s = Mojix.toHalfWidthKana(s);
 				} else {
+					s = Mojix.toFullWidthSpace(s);
 					s = Mojix.toFullWidthKana(s);
 					s = Mojix.toHiragana(s);
 				}
@@ -5624,26 +5627,43 @@
 
 
 	/**
+	 * ascii ルールのオプション
+	 * @typedef {Object} AsciiRuleOptions
+	 * @property {"none"|"upper"|"lower"} [case] - 英字の大文字/小文字統一
+	 */
+
+	/**
 	 * ascii ルールを生成する
 	 * - 全角英数字・記号・全角スペースを半角へ正規化する
-	 * - カナは変換しない
+	 * - 必要に応じて英字を大文字/小文字へ統一
 	 *
+	 * @param {AsciiRuleOptions} [options]
 	 * @returns {Rule}
 	 */
-	function ascii() {
+	function ascii(options = {}) {
+		/** @type {AsciiRuleOptions} */
+		const opt = {
+			case: options.case ?? null
+		};
+
 		return {
 			name: "ascii",
 			targets: ["input", "textarea"],
 
-			/**
-			 * 英数字・記号の半角正規化
-			 * @param {string} value
-			 * @param {GuardContext} ctx
-			 * @returns {string}
-			 */
 			normalizeChar(value, ctx) {
-				const s = String(value);
-				return Mojix.toHalfWidthAsciiCode(s);
+				let s = String(value);
+
+				// まず半角へ正規化
+				s = Mojix.toHalfWidthAsciiCode(s);
+
+				// 英字の大文字/小文字統一
+				if (opt.case === "upper") {
+					s = s.toUpperCase();
+				} else if (opt.case === "lower") {
+					s = s.toLowerCase();
+				}
+
+				return s;
 			}
 		};
 	}
@@ -5653,6 +5673,7 @@
 	 *
 	 * 対応する data 属性
 	 * - data-tig-rules-ascii
+	 * - data-tig-rules-ascii-case   ("none" | "upper" | "lower")
 	 *
 	 * @param {DOMStringMap} dataset
 	 * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -5662,7 +5683,19 @@
 		if (dataset.tigRulesAscii == null) {
 			return null;
 		}
-		return ascii();
+
+		const options = {};
+
+		const caseOpt = parseDatasetEnum(dataset.tigRulesAsciiCase, [
+			"none",
+			"upper",
+			"lower"
+		]);
+		if (caseOpt != null) {
+			options.case = caseOpt;
+		}
+
+		return ascii(options);
 	};
 
 	/* eslint-disable max-len */
@@ -5681,17 +5714,18 @@
 	 * filter ルールのカテゴリ名
 	 *
 	 * - "digits"         : ASCII 数字 (0-9)
-	 * - "alpha"          : ASCII 英字 (A-Z, a-z)
-	 * - "ascii"          : ASCII 可視文字 (U+0020–U+007E)
+	 * - "alpha-upper"    : ASCII 英字大文字 (A-Z)
+	 * - "alpha-lower"    : ASCII 英字小文字 (a-z)
+	 * - "ascii"          : ASCII 可視文字 + スペース含む (U+0020–U+007E)
 	 * - "hiragana"       : ひらがな (U+3040–U+309F)
 	 * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
 	 * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
-	 * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、補助平面禁止）
+	 * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、サロゲートペア、補助平面禁止）
 	 * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
 	 * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
 	 * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
 	 *
-	 * @typedef {"digits"|"alpha"|"ascii"|"hiragana"|"katakana-full"|"katakana-half"|"bmp-only"|"sjis-only"|"cp932-only"|"single-codepoint-only"} FilterCategory
+	 * @typedef {"digits"|"alpha-upper"|"alpha-lower"|"ascii"|"hiragana"|"katakana-full"|"katakana-half"|"bmp-only"|"sjis-only"|"cp932-only"|"single-codepoint-only"} FilterCategory
 	 */
 
 	/**
@@ -5702,7 +5736,8 @@
 	/** @type {readonly FilterCategory[]} */
 	const FILTER_CATEGORIES = [
 		"digits",
-		"alpha",
+		"alpha-upper",
+		"alpha-lower",
 		"ascii",
 		"hiragana",
 		"katakana-full",
@@ -5778,11 +5813,17 @@
 			digits: (g, s) => {
 				return g.length === 1 && g[0] >= 0x30 && g[0] <= 0x39; // '0'..'9'
 			},
-			alpha: (g, s) => {
+			"alpha-upper": (g, s) => {
 				if (g.length !== 1) { return false; }
 				const c = g[0];
-				// 'A'..'Z' or 'a'..'z'
-				return (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
+				// 'A'..'Z'
+				return c >= 0x41 && c <= 0x5A;
+			},
+			"alpha-lower": (g, s) => {
+				if (g.length !== 1) { return false; }
+				const c = g[0];
+				// 'a'..'z'
+				return c >= 0x61 && c <= 0x7A;
 			},
 			ascii: (g, s) => {
 				if (g.length !== 1) { return false; }
@@ -6292,12 +6333,11 @@
 			targets: ["input", "textarea"],
 
 			/**
-			 * 構造正規化
-			 *
+			 * 確定時に整える
 			 * @param {string} value
 			 * @returns {string}
 			 */
-			normalizeStructure(value) {
+			fix(value) {
 				return value.trim();
 			}
 		};
@@ -6371,11 +6411,11 @@
 
 	/**
 	 * バージョン（ビルド時に置換したいならここを差し替える）
-	 * 例: rollup replace で ""0.1.3"" を package.json の version に置換
+	 * 例: rollup replace で ""0.1.4"" を package.json の version に置換
 	 */
 	// @ts-ignore
 	// eslint-disable-next-line no-undef
-	const version = "0.1.3" ;
+	const version = "0.1.4" ;
 
 	exports.ascii = ascii;
 	exports.attach = attach;

@@ -7,7 +7,7 @@
 	</head>
 	<body>
 		<label>
-			<input id="price" type="text" inputmode="decimal" style="text-align: right" />
+			<input id="name" type="text" />
 		</label>
 
 		<div id="output" class="kv"></div>
@@ -16,26 +16,20 @@
 			import { bindGuardDebug } from "./js/guard-debug.js";
 			import { attach, rules } from "./lib/text-input-guard.min.js";
 
-			const input = document.getElementById("price");
+			const input = document.getElementById("name");
 			const output = document.getElementById("output");
 
 			const guard = attach(input, {
 				rules: [
-					rules.numeric({
-						allowFullWidth: true,
-						allowMinus: true,
-						allowDecimal: true
+					rules.filter({
+						category: ["bmp-only"]
 					}),
-					rules.digits({
-						int: 8,
-						frac: 4,
-						overflowInputInt: "block",
-						overflowInputFrac: "block"
-					}),
-					rules.comma()
+					rules.filter({
+						category: ["single-codepoint-only"]
+					})
 				]
 			});
-			guard.setValue("123.45");
+
 			bindGuardDebug(guard, output);
 		</script>
 	</body>

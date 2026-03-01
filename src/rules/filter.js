@@ -18,17 +18,18 @@ import { parseDatasetEnum, parseDatasetEnumList } from "./_dataset.js";
  * filter ルールのカテゴリ名
  *
  * - "digits"         : ASCII 数字 (0-9)
- * - "alpha"          : ASCII 英字 (A-Z, a-z)
- * - "ascii"          : ASCII 可視文字 (U+0020–U+007E)
+ * - "alpha-upper"    : ASCII 英字大文字 (A-Z)
+ * - "alpha-lower"    : ASCII 英字小文字 (a-z)
+ * - "ascii"          : ASCII 可視文字 + スペース含む (U+0020–U+007E)
  * - "hiragana"       : ひらがな (U+3040–U+309F)
  * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
  * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
- * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、補助平面禁止）
+ * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、サロゲートペア、補助平面禁止）
  * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
  * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
  * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
  *
- * @typedef {"digits"|"alpha"|"ascii"|"hiragana"|"katakana-full"|"katakana-half"|"bmp-only"|"sjis-only"|"cp932-only"|"single-codepoint-only"} FilterCategory
+ * @typedef {"digits"|"alpha-upper"|"alpha-lower"|"ascii"|"hiragana"|"katakana-full"|"katakana-half"|"bmp-only"|"sjis-only"|"cp932-only"|"single-codepoint-only"} FilterCategory
  */
 
 /**
@@ -39,7 +40,8 @@ import { parseDatasetEnum, parseDatasetEnumList } from "./_dataset.js";
 /** @type {readonly FilterCategory[]} */
 const FILTER_CATEGORIES = [
 	"digits",
-	"alpha",
+	"alpha-upper",
+	"alpha-lower",
 	"ascii",
 	"hiragana",
 	"katakana-full",
@@ -115,11 +117,17 @@ const createCategoryTester = function (categories) {
 		digits: (g, s) => {
 			return g.length === 1 && g[0] >= 0x30 && g[0] <= 0x39; // '0'..'9'
 		},
-		alpha: (g, s) => {
+		"alpha-upper": (g, s) => {
 			if (g.length !== 1) { return false; }
 			const c = g[0];
-			// 'A'..'Z' or 'a'..'z'
-			return (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A);
+			// 'A'..'Z'
+			return c >= 0x41 && c <= 0x5A;
+		},
+		"alpha-lower": (g, s) => {
+			if (g.length !== 1) { return false; }
+			const c = g[0];
+			// 'a'..'z'
+			return c >= 0x61 && c <= 0x7A;
 		},
 		ascii: (g, s) => {
 			if (g.length !== 1) { return false; }

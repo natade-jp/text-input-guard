@@ -18,12 +18,11 @@ export function trim() {
 		targets: ["input", "textarea"],
 
 		/**
-		 * 構造正規化
-		 *
+		 * 確定時に整える
 		 * @param {string} value
 		 * @returns {string}
 		 */
-		normalizeStructure(value) {
+		fix(value) {
 			return value.trim();
 		}
 	};

@@ -5,8 +5,9 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
-		rules.katakana(),
-		rules.zenkaku(),
+		rules.ascii({
+			case: "upper"
+		}),
 		rules.trim()
 	]
 });

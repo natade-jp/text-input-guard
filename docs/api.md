@@ -295,7 +295,93 @@ guard.setValue("", "none");
 
 表示整形系（`comma` / `prefix` / `suffix`）は、基本的に最後に置くのを推奨します。
 
-### 数値向け
+### 文字列系
+
+氏名・コード・メモなど「文字列として扱う入力」に使用します。
+
+#### `kana()`
+
+かな文字の正規化を行います。
+
+```js
+rules.kana({
+	target: "katakana-full"
+});
+```
+
+オプション
+
+| option   | type                                               | default           | 説明                                                     |
+| -------- | -------------------------------------------------- | ----------------- | -------------------------------------------------------- |
+| `target` | `"katakana-full" \| "katakana-half" \| "hiragana"` | `"katakana-full"` | 統一先                                                   |
+| `nfkc`   | `boolean`                                          | `true`            | 事前に Unicode NFKC 正規化を行う（合体文字などを正規化） |
+
+#### `ascii()`
+
+ASCII範囲へ正規化します（カナは対象外）。
+
+```js
+rules.ascii();
+```
+
+オプション
+
+| option | type                           | default  | 説明   |
+| ------ | ------------------------------ | -------- | ------ |
+| `case` | `"none" \| "upper" \| "lower"` | `"none"` | 統一先 |
+
+#### `filter()`
+
+許可/禁止文字の制御を行います。
+
+```js
+rules.filter({
+	category: ["digits"],
+	mode: "error"
+});
+```
+
+オプション
+
+| option       | type                | default  | 説明                                                            |
+| ------------ | ------------------- | -------- | --------------------------------------------------------------- |
+| `category`   | `FilterCategory[]`  | -        | 許可カテゴリ（配列）                                            |
+| `mode`       | `"drop" \| "error"` | `"drop"` | 不許可文字の扱い（drop: 削除 / error: 削除せずエラーを積む）    |
+| `allow`      | `RegExp \| string`  | -        | 追加で許可する正規表現（1文字にマッチさせる想定）               |
+| `allowFlags` | `string`            | -        | `allow` が文字列のときの flags（`"iu"` など。`g` / `y` は無視） |
+| `deny`       | `RegExp \| string`  | -        | 除外する正規表現（1文字にマッチさせる想定）                     |
+| `denyFlags`  | `string`            | -        | `deny` が文字列のときの flags（`"iu"` など。`g` / `y` は無視）  |
+
+補足（`FilterCategory`）
+
+`category` で指定できる値は次の通りです。
+
+- `"digits"` : ASCII 数字 (`0-9`)
+- `"alpha-upper"` : ASCII 英字大文字 (`A-Z`)
+- `"alpha-lower"` : ASCII 英字小文字 (`a-z`)
+- `"ascii"` : ASCII 可視文字 + スペース含む (`U+0020–U+007E`)
+- `"hiragana"` : ひらがな (`U+3040–U+309F`)
+- `"katakana-full"` : 全角カタカナ (`U+30A0–U+30FF`)
+- `"katakana-half"` : 半角カタカナ (`U+FF65–U+FF9F`)
+- `"bmp-only"` : BMP のみ許可（`U+0000–U+FFFF`、サロゲートペア禁止、補助平面禁止）
+- `"sjis-only"` : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
+- `"cp932-only"` : Windows-31J (CP932) でエンコード可能な文字のみ許可
+- `"single-codepoint-only"` : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
+
+運用上の注意
+
+- `allow` / `deny` は「1文字にマッチさせる想定」です。長さをまたぐパターンを入れると意図とズレる可能性があります。
+- `allow` / `deny` を文字列で渡す場合に、flags を分けて指定したいときは `allowFlags` / `denyFlags` を使います（`g` / `y` は無視されます）。
+
+#### `trim()`
+
+前後の空白を削除します。
+
+```js
+rules.trim();
+```
+
+### 数値系
 
 金額・数量など「数値として扱う入力」に使用します。
 
@@ -382,6 +468,8 @@ rules.comma();
 rules.prefix({ text: "¥" });
 ```
 
+オプション
+
 | option          | type      | default | 説明                 |
 | --------------- | --------- | ------- | -------------------- |
 | `text`          | `string`  | 必須    | 先頭に付ける文字列   |
@@ -395,85 +483,12 @@ rules.prefix({ text: "¥" });
 rules.suffix({ text: "円" });
 ```
 
+オプション
+
 | option          | type      | default | 説明                 |
 | --------------- | --------- | ------- | -------------------- |
 | `text`          | `string`  | 必須    | 末尾に付ける文字列   |
 | `showWhenEmpty` | `boolean` | `false` | 値が空でも表示するか |
-
-### 文字列向け
-
-氏名・コード・メモなど「文字列として扱う入力」に使用します。
-
-#### `kana()`
-
-かな文字の正規化を行います。
-
-```js
-rules.kana({
-	target: "katakana-full"
-});
-```
-
-| option   | type                                               | default           | 説明                                                     |
-| -------- | -------------------------------------------------- | ----------------- | -------------------------------------------------------- |
-| `target` | `"katakana-full" \| "katakana-half" \| "hiragana"` | `"katakana-full"` | 統一先                                                   |
-| `nfkc`   | `boolean`                                          | `true`            | 事前に Unicode NFKC 正規化を行う（合体文字などを正規化） |
-
-#### `ascii()`
-
-ASCII範囲へ正規化します（カナは対象外）。
-
-```js
-rules.ascii();
-```
-
-#### `filter()`
-
-許可/禁止文字の制御を行います。
-
-```js
-rules.filter({
-	category: ["digits"],
-	mode: "error"
-});
-```
-
-| option       | type                | default  | 説明                                                            |
-| ------------ | ------------------- | -------- | --------------------------------------------------------------- |
-| `category`   | `FilterCategory[]`  | -        | 許可カテゴリ（配列）                                            |
-| `mode`       | `"drop" \| "error"` | `"drop"` | 不許可文字の扱い（drop: 削除 / error: 削除せずエラーを積む）    |
-| `allow`      | `RegExp \| string`  | -        | 追加で許可する正規表現（1文字にマッチさせる想定）               |
-| `allowFlags` | `string`            | -        | `allow` が文字列のときの flags（`"iu"` など。`g` / `y` は無視） |
-| `deny`       | `RegExp \| string`  | -        | 除外する正規表現（1文字にマッチさせる想定）                     |
-| `denyFlags`  | `string`            | -        | `deny` が文字列のときの flags（`"iu"` など。`g` / `y` は無視）  |
-
-補足（`FilterCategory`）
-
-`category` で指定できる値は次の通りです。
-
-- `"digits"` : ASCII 数字 (`0-9`)
-- `"alpha"` : ASCII 英字 (`A-Z`, `a-z`)
-- `"ascii"` : ASCII 可視文字 (`U+0020–U+007E`)
-- `"hiragana"` : ひらがな (`U+3040–U+309F`)
-- `"katakana-full"` : 全角カタカナ (`U+30A0–U+30FF`)
-- `"katakana-half"` : 半角カタカナ (`U+FF65–U+FF9F`)
-- `"bmp-only"` : BMP のみ許可（`U+0000–U+FFFF`、補助平面禁止）
-- `"sjis-only"` : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
-- `"cp932-only"` : Windows-31J (CP932) でエンコード可能な文字のみ許可
-- `"single-codepoint-only"` : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
-
-運用上の注意
-
-- `allow` / `deny` は「1文字にマッチさせる想定」です。長さをまたぐパターンを入れると意図とズレる可能性があります。
-- `allow` / `deny` を文字列で渡す場合に、flags を分けて指定したいときは `allowFlags` / `denyFlags` を使います（`g` / `y` は無視されます）。
-
-#### `trim()`
-
-前後の空白を削除します。
-
-```js
-rules.trim();
-```
 
 ## autoAttach 向け data 属性方法
 

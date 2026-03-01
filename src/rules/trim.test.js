@@ -4,26 +4,26 @@ import assert from "node:assert/strict";
 
 import { trim } from "./trim.js";
 
-test("trim - normalizeStructure: 前後の空白が除去される", () => {
+test("trim - fix: 前後の空白が除去される", () => {
 	const rule = trim();
 
-	const result = rule.normalizeStructure("  abc  ");
+	const result = rule.fix("  abc  ");
 
 	assert.equal(result, "abc");
 });
 
-test("trim - normalizeStructure: タブや改行も除去される", () => {
+test("trim - fix: タブや改行も除去される", () => {
 	const rule = trim();
 
-	const result = rule.normalizeStructure("\n\t abc \r\n");
+	const result = rule.fix("\n\t abc \r\n");
 
 	assert.equal(result, "abc");
 });
 
-test("trim - normalizeStructure: 空白のみの場合は空文字になる", () => {
+test("trim - fix: 空白のみの場合は空文字になる", () => {
 	const rule = trim();
 
-	const result = rule.normalizeStructure("   \t  ");
+	const result = rule.fix("   \t  ");
 
 	assert.equal(result, "");
 });
@@ -48,7 +48,7 @@ test("trim - fromDataset: 値が 'false' でも属性が存在すれば有効に
 	const rule = trim.fromDataset(dataset, null);
 
 	assert.ok(rule);
-	assert.equal(rule.normalizeStructure("  a  "), "a");
+	assert.equal(rule.fix("  a  "), "a");
 });
 
 test("trim - fromDataset: _el 引数は未使用だが渡しても問題ない", () => {

@@ -445,19 +445,26 @@ type KanaRuleOptions = {
 };
 
 /**
+ * ascii ルールのオプション
+ * @typedef {Object} AsciiRuleOptions
+ * @property {"none"|"upper"|"lower"} [case] - 英字の大文字/小文字統一
+ */
+/**
  * ascii ルールを生成する
  * - 全角英数字・記号・全角スペースを半角へ正規化する
- * - カナは変換しない
+ * - 必要に応じて英字を大文字/小文字へ統一
  *
+ * @param {AsciiRuleOptions} [options]
  * @returns {import("../text-input-guard.js").Rule}
  */
-declare function ascii(): Rule;
+declare function ascii(options?: AsciiRuleOptions): Rule;
 declare namespace ascii {
     /**
      * datasetから ascii ルールを生成する
      *
      * 対応する data 属性
      * - data-tig-rules-ascii
+     * - data-tig-rules-ascii-case   ("none" | "upper" | "lower")
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -465,6 +472,15 @@ declare namespace ascii {
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
+/**
+ * ascii ルールのオプション
+ */
+type AsciiRuleOptions = {
+    /**
+     * - 英字の大文字/小文字統一
+     */
+    case?: "none" | "upper" | "lower";
+};
 
 /**
  * filter ルールを生成する
@@ -499,17 +515,18 @@ declare namespace filter {
  * filter ルールのカテゴリ名
  *
  * - "digits"         : ASCII 数字 (0-9)
- * - "alpha"          : ASCII 英字 (A-Z, a-z)
- * - "ascii"          : ASCII 可視文字 (U+0020–U+007E)
+ * - "alpha-upper"    : ASCII 英字大文字 (A-Z)
+ * - "alpha-lower"    : ASCII 英字小文字 (a-z)
+ * - "ascii"          : ASCII 可視文字 + スペース含む (U+0020–U+007E)
  * - "hiragana"       : ひらがな (U+3040–U+309F)
  * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
  * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
- * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、補助平面禁止）
+ * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、サロゲートペア、補助平面禁止）
  * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
  * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
  * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
  */
-type FilterCategory = "digits" | "alpha" | "ascii" | "hiragana" | "katakana-full" | "katakana-half" | "bmp-only" | "sjis-only" | "cp932-only" | "single-codepoint-only";
+type FilterCategory = "digits" | "alpha-upper" | "alpha-lower" | "ascii" | "hiragana" | "katakana-full" | "katakana-half" | "bmp-only" | "sjis-only" | "cp932-only" | "single-codepoint-only";
 /**
  * filter ルールの動作モード
  */
