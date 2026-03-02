@@ -5,10 +5,9 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
-		rules.ascii({
-			case: "upper"
-		}),
-		rules.trim()
+		rules.length({
+			max: 1, overflowInput: "block", unit: "utf-16"
+		})
 	]
 });
 guard.setValue("123");

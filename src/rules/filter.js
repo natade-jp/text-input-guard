@@ -198,7 +198,7 @@ const createCategoryTester = function (categories) {
 /**
  * 1文字が許可されるか判定する関数を作る
  * @param {FilterCategory[]} categoryList
- * @param {(graphem: Grapheme, s: string) => boolean} categoryTest
+ * @param {(g: Grapheme, s: string) => boolean} categoryTest
  * @param {RegExp|undefined} allowRe
  * @param {RegExp|undefined} denyRe
  * @returns {(g: Grapheme, s: string) => boolean}
@@ -251,10 +251,10 @@ const scanByAllowed = function (value, isAllowed, maxInvalidChars = 20) {
 	 * グラフェムの配列
 	 * @type {Grapheme[]}
 	 */
-	const graphemArray = Mojix.toMojiArrayFromString(v);
+	const graphemeArray = Mojix.toMojiArrayFromString(v);
 
 	// JS の文字列イテレータはコードポイント単位で回るので Array.from は不要
-	for (const g of graphemArray) {
+	for (const g of graphemeArray) {
 		const s = Mojix.toStringFromMojiArray([g]);
 		if (isAllowed(g, s)) {
 			filtered += s;

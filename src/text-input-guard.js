@@ -74,8 +74,8 @@ import { SwapState } from "./swap-state.js";
  * @property {boolean} warn - warnログを出すかどうか
  * @property {string} invalidClass - エラー時に付与するclass名
  * @property {boolean} composing - IME変換中かどうか
- * @property {string} acceptedValue - 受理済みの値（差分推定・revertの基準）
- * @property {SelectionState} editSelection - 入力反映直前の選択範囲（beforeinput時点、挿入/置換位置の判定に使用）
+ * @property {string} lastAcceptedValue - 直前に受理した表示値
+ * @property {SelectionState} lastAcceptedSelection - 直前に受理したselection
  * @property {string|null} inputType - 直前の入力操作種別（insertText / insertFromPaste / insertCompositionText 等）
  * @property {string|null} inputData - 直前の入力操作で挿入される文字列（取れない場合あり）
  * @property {(e: TigError) => void} pushError - エラーを登録する関数
@@ -668,7 +668,7 @@ class InputGuard {
 		this.revertRequest = null;
 
 		if (this.warn) {
-			// console.log(`[text-input-guard] reverted: ${req.reason}`, req.detail);
+			// console.warn(`[text-input-guard] reverted: ${req.reason}`, req.detail);
 		}
 	}
 
@@ -679,10 +679,8 @@ class InputGuard {
 	createCtx() {
 		// beforeinput が取れていればそれを優先。無い場合は受理済み値を基準にする
 		const snap = this.beforeInputSnapshot;
-		const editSelection = snap ? snap.selection : this.lastAcceptedSelection;
-		const inputType = snap ? snap.inputType : null;
-		const inputData = snap ? snap.inputData : null;
-
+		const inputType = snap ? snap.inputType : "";
+		const inputData = snap ? snap.inputData : "";
 		return {
 			hostElement: this.hostElement,
 			displayElement: this.displayElement,
@@ -691,8 +689,8 @@ class InputGuard {
 			warn: this.warn,
 			invalidClass: this.invalidClass,
 			composing: this.composing,
-			acceptedValue: this.lastAcceptedValue,
-			editSelection,
+			lastAcceptedValue: this.lastAcceptedValue,
+			lastAcceptedSelection: this.lastAcceptedSelection,
 			inputType,
 			inputData,
 			pushError: (e) => this.errors.push(e),
