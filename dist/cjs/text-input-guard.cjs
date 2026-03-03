@@ -332,8 +332,23 @@ class SwapState {
  * @property {boolean} warn - warnログを出すかどうか
  * @property {string} invalidClass - エラー時に付与するclass名
  * @property {boolean} composing - IME変換中かどうか
+ * @property {string|null} inputType - 直前の入力操作種別（insertText / insertFromPaste / insertCompositionText 等）
+ * @property {string} beforeText - 挿入前の全文字列（置換範囲は除去済み）
+ * @property {number} replaceStart - 挿入位置/置換開始位置（selectionStart）
+ * @property {number} replaceEnd - 置換終了位置（selectionEnd）
+ * @property {string} insertedText - 挿入された文字列
+ * @property {string} afterText - 挿入後の全文字列（後で代入する）
  * @property {(e: TigError) => void} pushError - エラーを登録する関数
  * @property {(req: RevertRequest) => void} requestRevert - 入力を直前の受理値へ巻き戻す要求
+ */
+
+/**
+ * beforeinput で採取する「入力直前スナップショット」
+ * - 入力反映前の状態を保持し、差分判定や挿入位置特定に利用する
+ * @typedef {Object} BeforeInputSnapshot
+ * @property {SelectionState} selection - 入力反映前の選択範囲（挿入/置換位置の判定に使用）
+ * @property {string|null} inputType - 入力種別（insertText / insertFromPaste / deleteContentBackward 等）
+ * @property {string|null} insertedText - 挿入された文字列（通常入力時に取得できる場合あり）
  */
 
 /**
@@ -593,6 +608,11 @@ class InputGuard {
 		this.onInput = this.onInput.bind(this);
 
 		/**
+		 * beforeinputイベントハンドラ（this固定）
+		 */
+		this.onBeforeInput = this.onBeforeInput.bind(this);
+
+		/**
 		 * blurイベントハンドラ（this固定）
 		 */
 		this.onBlur = this.onBlur.bind(this);
@@ -621,16 +641,23 @@ class InputGuard {
 		this.pendingCompositionCommit = false;
 
 		/**
-		 * 直前に受理した表示値（block時の戻し先）
+		 * 直前に受理した表示値、正しい情報のスナップショットのような情報（block時の戻し先）
 		 * @type {string}
 		 */
 		this.lastAcceptedValue = "";
 
 		/**
-		 *  直前に受理したselection（block時の戻し先）
+		 *  直前に受理したselection、正しい情報のスナップショットのような情報（block時の戻し先）
 		 * @type {SelectionState}
 		 */
 		this.lastAcceptedSelection = { start: null, end: null, direction: null };
+
+		/**
+		 * 入力直前スナップショット（beforeinputで更新）
+		 * length等の「挿入位置優先」ロジックで使用する
+		 * @type {BeforeInputSnapshot|null}
+		 */
+		this.beforeInputSnapshot = null;
 
 		/**
 		 * ルールからのrevert要求
@@ -832,6 +859,7 @@ class InputGuard {
 		this.displayElement.addEventListener("compositionstart", this.onCompositionStart);
 		this.displayElement.addEventListener("compositionend", this.onCompositionEnd);
 		this.displayElement.addEventListener("input", this.onInput);
+		this.displayElement.addEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.addEventListener("blur", this.onBlur);
 
 		// フォーカスで編集用に戻す
@@ -852,6 +880,7 @@ class InputGuard {
 		this.displayElement.removeEventListener("compositionstart", this.onCompositionStart);
 		this.displayElement.removeEventListener("compositionend", this.onCompositionEnd);
 		this.displayElement.removeEventListener("input", this.onInput);
+		this.displayElement.removeEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.removeEventListener("blur", this.onBlur);
 		this.displayElement.removeEventListener("focus", this.onFocus);
 		this.displayElement.removeEventListener("keyup", this.onSelectionChange);
@@ -893,6 +922,70 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtx() {
+		const snap = this.beforeInputSnapshot;
+		const inputType = snap?.inputType ?? "";
+		const insertedText = snap?.insertedText ?? "";
+
+		// 受理済み（正規化済み）の全文を「今回の編集の基準」として使う
+		// display.value はブラウザ側の編集結果が混ざるので、差分再構成の基準にはしない
+		const beforeText = this.lastAcceptedValue ?? "";
+
+		// selection は2系統ある：
+		// - snapSel: beforeinput 時点で取得した selection（今回の編集の基準点になり得る）
+		// - lastSel: ユーザー操作（keyup/mouseup/select 等）で追跡している selection（常にUIの見た目に近い）
+		//
+		// 基本は snapSel を優先するが、IME が絡むと snapSel が「変換中の範囲（composition range）」を指して
+		// “本当のキャレット位置” と一致しないことがあるため、その場合は lastSel を採用する。
+		const snapSel = snap?.selection ?? null;
+		const lastSel = this.lastAcceptedSelection;
+
+		// 通常は beforeinput の selection（snapSel）を使うのが一番正確
+		let baseSel = snapSel ?? lastSel;
+
+		// IME由来の入力（変換中の確定/更新など）は、beforeinput の selection が
+		// 「IMEが管理する範囲」になってしまうことがある。
+		// この場合 snapSel を使うと “勝手に上書き” が起きやすいので lastSel に寄せる。
+		const isCompositionInput =
+			this.composing ||
+			inputType === "insertCompositionText" ||
+			inputType === "deleteCompositionText" ||
+			inputType === "insertFromComposition";
+
+		// もう一つの検知：snapSel が「範囲選択」なのに lastSel が「キャレットのみ」なら、
+		// その範囲はユーザーが選択したのではなく、IMEが作っている範囲である可能性が高い。
+		// （例：12|34 に 5 を入れたいのに、IME範囲を置換して 1254 になる、など）
+		const looksLikeImeRange =
+			snapSel &&
+			(snapSel.start !== snapSel.end) &&
+			(lastSel.start === lastSel.end) &&
+			(inputType === "insertText" || inputType === "insertCompositionText");
+
+		if (isCompositionInput || looksLikeImeRange) {
+			baseSel = lastSel;
+		}
+
+		let replaceStart = baseSel.start ?? 0;
+		let replaceEnd = baseSel.end ?? 0;
+
+		// Backspace / Delete は「挿入文字がない（dataがnull）」ことが多い。
+		// そのままだと差分再構成で “何も変わらない” 扱いになって削除が効かなくなるため、
+		// 選択範囲が無い場合は「削除される1文字ぶん」の置換範囲をここで作る。
+		//
+		// ※ 選択範囲がある削除は replaceStart!=replaceEnd なので補正不要（その範囲を消すだけでよい）
+		if (replaceStart === replaceEnd) {
+			if (inputType === "deleteContentBackward") {
+				// Backspace: キャレットの左側1文字を削除
+				replaceStart = Math.max(0, replaceStart - 1);
+				replaceEnd = snapSel.start ?? replaceEnd;
+			} else if (inputType === "deleteContentForward") {
+				// Delete: キャレットの右側1文字を削除
+				replaceStart = snapSel.start ?? replaceStart;
+				replaceEnd = Math.min(beforeText.length, replaceEnd + 1);
+			}
+			// 追加で拾うならここ：
+			// deleteWordBackward / deleteWordForward / deleteByCut / deleteSoftLineBackward ... etc
+		}
+
 		return {
 			hostElement: this.hostElement,
 			displayElement: this.displayElement,
@@ -901,6 +994,12 @@ class InputGuard {
 			warn: this.warn,
 			invalidClass: this.invalidClass,
 			composing: this.composing,
+			inputType,
+			beforeText,
+			replaceStart,
+			replaceEnd,
+			insertedText,
+			afterText: null, // 後で代入する
 			pushError: (e) => this.errors.push(e),
 			requestRevert: (req) => {
 				// 1回でもrevert要求が出たら採用（最初の理由を保持）
@@ -1066,6 +1165,23 @@ class InputGuard {
 	}
 
 	/**
+	 * beforeinput：入力が反映される直前に呼ばれる
+	 * - ここでの value/selection が「今回の編集の基準点」になる
+	 * @param {InputEvent} e
+	 * @returns {void}
+	 */
+	onBeforeInput(e) {
+		const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+		// 現時点（反映前）の選択範囲
+		const selection = this.readSelection(el);
+		/** @type {string|null} */
+		const inputType = typeof e.inputType === "string" ? e.inputType : null;
+		/** @type {string|null} */
+		const insertedText = typeof e.data === "string" ? e.data : null;
+		this.beforeInputSnapshot = { selection, inputType, insertedText };
+	}
+
+	/**
 	 * blurイベント：確定時評価（normalize → validate → fix → format、同期、class更新）
 	 * @returns {void}
 	 */
@@ -1075,7 +1191,7 @@ class InputGuard {
 	}
 
 	/**
-	 * focusイベント：表示整形（カンマ等）を剥がして編集しやすい状態にする
+	 * focusイベント：表示整形を剥がして編集しやすい状態にする
 	 * - validate は走らせない（触っただけで赤くしたくないため）
 	 * @returns {void}
 	 */
@@ -1086,9 +1202,10 @@ class InputGuard {
 		const current = display.value;
 
 		const ctx = this.createCtx();
+		ctx.afterText = current;
 
 		let v = current;
-		v = this.runNormalizeChar(v, ctx);       // カンマ除去が効く
+		v = this.runNormalizeChar(v, ctx);
 		v = this.runNormalizeStructure(v, ctx);
 
 		if (v !== current) {
@@ -1156,6 +1273,83 @@ class InputGuard {
 	}
 
 	/**
+	 * evaluateInput専用createCtx（ルール実行に渡すコンテキストを作り、正規箇所も実行する）
+	 *
+	 * - CTX を作成する中で、文字の正規化と構造の正規化を行い、CTXのその情報に合わせる
+	 * - runNormalizeChar に対して入力した文字のみを入れることで、処理の高速化とキャレットズレが起きないように制御する
+	 * - runNormalizeStructure は全体の文字を入れるため、ここでの処理はキャレットズレが起きる可能性がある
+	 * @returns {GuardContext}
+	 */
+	createCtxAndNormalize() {
+		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+		const current = display.value;
+		const ctx = this.createCtx();
+		ctx.afterText = current;
+
+		// 元のテキスト
+		const beforeText = ctx.beforeText;
+
+		// 追加入力したテキスト
+		let insertedText = ctx.insertedText;
+
+		// 左端の挿入箇所
+		const replaceStart = ctx.replaceStart;
+
+		// 現状のテキスト
+		const tempText = current;
+
+		// 作成する全体のテキスト
+		let newText = beforeText;
+
+		if (ctx.replaceStart !== ctx.replaceEnd) {
+			// 選択範囲の前までと、選択範囲の後ろを結合して、間（選択部分）を削除する
+			newText = beforeText.slice(0, ctx.replaceStart) + beforeText.slice(ctx.replaceEnd);
+		}
+
+		// CTX の情報を最新の情報へ更新する
+		ctx.beforeText = newText;
+
+		// 挿入するテキストのみ文字チェックを行う
+		const normalizeCharText = this.runNormalizeChar(insertedText, ctx);
+		insertedText = normalizeCharText;
+
+		// 作成したテキストを挿入する
+		newText = newText.slice(0, replaceStart) + insertedText + newText.slice(replaceStart);
+
+		// 挿入したテキストの右側にカーソル位置をずらす
+		// insertedText は UTF-16 code unit 長なので、
+		// Selection は JS の index（UTF-16）前提で計算
+		/**
+		 * @type {SelectionState}
+		 */
+		let newSelection = { start: replaceStart + insertedText.length, end: replaceStart + insertedText.length, direction: "forward" };
+
+		// 挿入後文章全体に構造チェックを行う
+		const normalizeStructureText = this.runNormalizeStructure(newText, ctx);
+
+		// 構成した文章がずれていた場合、カーソル位置の見直しを行う
+		if (newText !== normalizeStructureText) {
+			newText = normalizeStructureText;
+			// 入力した実際のテキスト(tempText)から、現在位置から左側のみ切り出して、左側のみ再チェックする
+			// 文章の長さに依存した変更があった場合は厳しいが、それ以外は以下の方法で切り抜けられる可能性が高い
+			let leftText = tempText.slice(0, replaceStart);
+			leftText = this.runNormalizeChar(leftText, ctx);
+			leftText = this.runNormalizeStructure(leftText, ctx);
+			const newPos = Math.min(leftText.length, newText.length);
+			newSelection = { start: newPos, end: newPos, direction: "forward" };
+		}
+
+		// 画面を更新
+		this.syncDisplay(newText);
+		this.writeSelection(display, newSelection);
+
+		// CTX の情報を最新の情報へ更新する
+		ctx.afterText = newText;
+
+		return ctx;
+	}
+
+	/**
 	 * 入力中の評価（IME中は何もしない）
 	 * - 固定順：normalize.char → normalize.structure → validate
 	 * - 値が変わったら display に反映し、raw も同期する
@@ -1170,26 +1364,15 @@ class InputGuard {
 		this.revertRequest = null;
 
 		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-		const current = display.value;
 
-		const ctx = this.createCtx();
-
-		// raw候補（入力中は表示値＝rawとして扱う）
-		let raw = current;
-
-		raw = this.runNormalizeChar(raw, ctx);
-		raw = this.runNormalizeStructure(raw, ctx);
-
-		// normalizeで変わったら反映（selection補正）
-		if (raw !== current) {
-			this.setDisplayValuePreserveCaret(display, raw, ctx);
-		}
+		const ctx = this.createCtxAndNormalize();
+		const raw = ctx.afterText;
 
 		// validate（入力中：エラー出すだけ）
 		this.runValidate(raw, ctx);
 
-		// revert要求が出たら巻き戻して終了
 		if (this.revertRequest) {
+			// revert要求が出たら巻き戻して終了
 			this.revertDisplay(this.revertRequest);
 			return;
 		}
@@ -1223,6 +1406,7 @@ class InputGuard {
 
 		// 1) raw候補（displayから取得）
 		let raw = display.value;
+		ctx.afterText = raw;
 
 		// 2) 正規化（rawとして扱う形に揃える）
 		raw = this.runNormalizeChar(raw, ctx);
@@ -1356,83 +1540,111 @@ class InputGuard {
 }
 
 /**
- * The script is part of TextInputGuard.
+ * dataset/option の boolean 値を解釈する
+ * - 未指定（null/undefined）の場合は defaultValue を返す
+ * - 空文字 "" は常に true（HTML属性文化）
+ * - 指定があるが解釈できない場合は undefined
  *
- * AUTHOR:
- *  natade-jp (https://github.com/natade-jp)
+ * true  : true / 1 / "true" / "1" / "yes" / "on" / ""
+ * false : false / 0 / "false" / "0" / "no" / "off"
  *
- * LICENSE:
- *  The MIT license https://opensource.org/licenses/MIT
- */
-
-/**
- * datasetのboolean値を解釈する
- * - 未指定なら undefined
- * - "" / "true" / "1" / "yes" / "on" は true
- * - "false" / "0" / "no" / "off" は false
- * @param {string|undefined} v
+ * @param {string|number|boolean|undefined|null} v
+ * @param {boolean} [defaultValue]
  * @returns {boolean|undefined}
  */
-function parseDatasetBool(v) {
-	if (v == null) { return; }
+function parseDatasetBool(v, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
+	if (typeof v === "boolean") { return v; }
+
+	if (typeof v === "number") {
+		if (v === 1) { return true; }
+		if (v === 0) { return false; }
+		return;
+	}
+
 	const s = String(v).trim().toLowerCase();
-	if (s === "" || s === "true" || s === "1" || s === "yes" || s === "on") { return true; }
+
+	// dataset の属性存在を true とみなす（例: data-xxx=""）
+	if (s === "") { return true; }
+
+	if (s === "true" || s === "1" || s === "yes" || s === "on") { return true; }
 	if (s === "false" || s === "0" || s === "no" || s === "off") { return false; }
+
 	return;
 }
 
 /**
- * datasetのnumber値を解釈する（整数想定）
- * - 未指定/空なら undefined
+ * dataset/option の number 値を解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
  * - 数値でなければ undefined
- * @param {string|undefined} v
+ * @param {string|number|undefined|null} v
+ * @param {number} [defaultValue]
  * @returns {number|undefined}
  */
-function parseDatasetNumber(v) {
-	if (v == null) { return; }
+function parseDatasetNumber(v, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
+	if (typeof v === "number") {
+		return Number.isFinite(v) ? v : undefined;
+	}
+
 	const s = String(v).trim();
-	if (s === "") { return; }
+	if (s === "") { return defaultValue; }
+
 	const n = Number(s);
 	return Number.isFinite(n) ? n : undefined;
 }
 
 /**
- * enumを解釈する（未指定なら undefined）
+ * enumを解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
+ * - 値が指定されているが allowed に含まれない場合は undefined を返す
+ *
  * @template {string} T
- * @param {string|undefined} v
+ * @param {string|undefined|null} v
  * @param {readonly T[]} allowed
+ * @param {T} [defaultValue]
  * @returns {T|undefined}
  */
-function parseDatasetEnum(v, allowed) {
-	if (v == null) { return; }
+function parseDatasetEnum(v, allowed, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
+
 	const s = String(v).trim();
-	if (s === "") { return; }
-	// 大文字小文字を区別したいならここを変える（今は厳密一致）
-	return /** @type {T|undefined} */ (allowed.includes(/** @type {any} */ (s)) ? s : undefined);
+	if (s === "") { return defaultValue; }
+
+	return /** @type {T|undefined} */ (
+		allowed.includes(/** @type {any} */ (s)) ? s : undefined
+	);
 }
 
 /**
- * enum のカンマ区切り複数指定を解釈する（未指定なら undefined）
- * - 未指定なら undefined
+ * enum のカンマ区切り複数指定を解釈する
+ * - 未指定（null/undefined/空文字）の場合は defaultValue を返す
  * - 空要素は無視
  * - allowed に含まれないものは除外
  *
- * 例:
- * - "a,b,c" -> ["a","b","c"]（allowed に含まれるもののみ）
- * - "" / "   " -> undefined
- * - "x,y"（どちらも allowed 外）-> []
- *
  * @template {string} T
- * @param {string|undefined} v
+ * @param {string|T[]|undefined|null} v
  * @param {readonly T[]} allowed
+ * @param {T[]} [defaultValue]
  * @returns {T[]|undefined}
  */
-function parseDatasetEnumList(v, allowed) {
-	if (v == null) { return; }
-	const s = String(v).trim();
-	if (s === "") { return; }
+function parseDatasetEnumList(v, allowed, defaultValue) {
+	if (v === null || v === undefined) { return defaultValue; }
 
-	/** @type {string[]} */
+	// JSオプションで配列直渡しも許可
+	if (Array.isArray(v)) {
+		const result = v.filter(
+			/** @returns {x is T} */
+			(x) => allowed.includes(/** @type {any} */ (x))
+		);
+		return result;
+	}
+
+	const s = String(v).trim();
+	if (s === "") { return defaultValue; }
+
 	const list = s
 		.split(",")
 		.map((x) => x.trim())
@@ -5890,7 +6102,7 @@ const createCategoryTester = function (categories) {
 /**
  * 1文字が許可されるか判定する関数を作る
  * @param {FilterCategory[]} categoryList
- * @param {(graphem: Grapheme, s: string) => boolean} categoryTest
+ * @param {(g: Grapheme, s: string) => boolean} categoryTest
  * @param {RegExp|undefined} allowRe
  * @param {RegExp|undefined} denyRe
  * @returns {(g: Grapheme, s: string) => boolean}
@@ -5943,10 +6155,10 @@ const scanByAllowed = function (value, isAllowed, maxInvalidChars = 20) {
 	 * グラフェムの配列
 	 * @type {Grapheme[]}
 	 */
-	const graphemArray = Mojix.toMojiArrayFromString(v);
+	const graphemeArray = Mojix.toMojiArrayFromString(v);
 
 	// JS の文字列イテレータはコードポイント単位で回るので Array.from は不要
-	for (const g of graphemArray) {
+	for (const g of graphemeArray) {
 		const s = Mojix.toStringFromMojiArray([g]);
 		if (isAllowed(g, s)) {
 			filtered += s;
@@ -6119,6 +6331,245 @@ filter.fromDataset = function fromDataset(dataset, _el) {
 	}
 
 	return filter(options);
+};
+
+/**
+ * The script is part of TextInputGuard.
+ *
+ * AUTHOR:
+ *  natade-jp (https://github.com/natade-jp)
+ *
+ * LICENSE:
+ *  The MIT license https://opensource.org/licenses/MIT
+ */
+
+
+/**
+ * length ルールのオプション
+ * @typedef {Object} LengthRuleOptions
+ * @property {number} [max] - 最大長（グラフェム数）。未指定なら制限なし
+ * @property {"block"|"error"} [overflowInput="block"] - 入力中に最大長を超えたときの挙動
+ * @property {"grapheme"|"utf-16"|"utf-32"} [unit="grapheme"] - 長さの単位
+ *
+ * block   : 最大長を超える部分を切る
+ * error   : エラーを積むだけ（値は変更しない）
+ */
+
+/**
+ * グラフェム（1グラフェムは、UTF-32の配列）
+ * @typedef {number[]} Grapheme
+ */
+
+/**
+ * グラフェム/UTF-16コード単位/UTF-32コード単位の長さを調べる
+ * @param {string} text
+ * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @returns {number}
+ */
+const getTextLengthByUnit = function(text, unit) {
+	if (unit === "grapheme") {
+		return Mojix.toMojiArrayFromString(text).length;
+	} else if (unit === "utf-16") {
+		return Mojix.toUTF16Array(text).length;
+	} else if (unit === "utf-32") {
+		return Mojix.toUTF32Array(text).length;
+	} else {
+		// ここには来ない
+		throw new Error(`Invalid unit: ${unit}`);
+	}
+};
+
+/**
+ * グラフェム/UTF-16コード単位/UTF-32コード単位でテキストを切る
+ * @param {string} text
+ * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @param {number} max
+ * @returns {string}
+ */
+const cutTextByUnit = function(text, unit, max) {
+	/**
+	 * グラフェムの配列
+	 * @type {Grapheme[]}
+	 */
+	const graphemeArray = Mojix.toMojiArrayFromString(text);
+
+	/**
+	 * 現在の位置
+	 */
+	let count = 0;
+
+	/**
+	 * グラフェムの配列（出力用）
+	 * @type {Grapheme[]}
+	 */
+	const outputGraphemeArray = [];
+
+	for (let i = 0; i < graphemeArray.length; i++) {
+		const g = graphemeArray[i];
+
+		// 1グラフェムあたりの長さ
+		let graphemeCount = 0;
+		if (unit === "grapheme") {
+			graphemeCount = 1;
+		} else if (unit === "utf-16") {
+			graphemeCount = 0;
+			for (let i = 0; i < g.length; i++) {
+				graphemeCount += (g[i] > 0xFFFF) ? 2 : 1;
+			}
+		} else if (unit === "utf-32") {
+			graphemeCount = g.length;
+		}
+
+		if (count + graphemeCount > max) {
+			// 空配列を渡すとNUL文字を返すため、空配列のときは空文字を返す
+			if (outputGraphemeArray.length === 0) {
+				return "";
+			}
+			// 超える前の位置で文字列化して返す
+			return Mojix.toStringFromMojiArray(outputGraphemeArray);
+		}
+
+		count += graphemeCount;
+		outputGraphemeArray.push(g);
+	}
+
+	// 全部入るなら元の text を返す
+	return text;
+};
+
+/**
+ * 元のテキストと追加のテキストの合計が max を超える場合、追加のテキストを切って合計が max に収まるようにする
+ * @param {string} beforeText 元のテキスト
+ * @param {string} insertedText 追加するテキスト
+ * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @param {number} max
+ * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は insertedText をそのまま返す）
+ */
+const cutLength = function(beforeText, insertedText, unit, max) {
+	const orgLen = getTextLengthByUnit(beforeText, unit);
+
+	// すでに最大長を超えている場合は追加のテキストを全て切る
+	if (orgLen >= max) { return ""; }
+
+	const addLen = getTextLengthByUnit(insertedText, unit);
+	const totalLen = orgLen + addLen;
+
+	if (totalLen <= max) {
+		// 今回の追加で範囲内に収まるなら何もしない
+		return insertedText;
+	}
+
+	// 超える場合は追加のテキストを切る
+	const allowedAddLen = max - orgLen;
+	return cutTextByUnit(insertedText, unit, allowedAddLen);
+};
+
+/**
+ * length ルールを生成する
+ * @param {LengthRuleOptions} [options]
+ * @returns {Rule}
+ */
+function length(options = {}) {
+	/** @type {LengthRuleOptions} */
+	const opt = {
+		max: typeof options.max === "number" ? options.max : undefined,
+		overflowInput: options.overflowInput ?? "block",
+		unit: options.unit ?? "grapheme"
+	};
+
+	return {
+		name: "length",
+		targets: ["input", "textarea"],
+
+		normalizeChar(value, ctx) {
+			// block 以外は何もしない
+			if (opt.overflowInput !== "block") {
+				return value;
+			}
+			// max 未指定なら制限なし
+			if (typeof opt.max !== "number") {
+				return value;
+			}
+
+			const beforeText = ctx.beforeText;
+			const insertedText = ctx.insertedText;
+			if (insertedText === "") {
+				return value;
+			}
+
+			const cutText = cutLength(beforeText, insertedText, opt.unit, opt.max);
+			return cutText;
+		},
+
+		validate(value, ctx) {
+			// error 以外は何もしない
+			if (opt.overflowInput !== "error") {
+				return value;
+			}
+			// max 未指定なら制限なし
+			if (typeof opt.max !== "number") {
+				return;
+			}
+
+			const len = getTextLengthByUnit(value, opt.unit);
+			if (len > opt.max) {
+				ctx.pushError({
+					code: "length.max_overflow",
+					rule: "length",
+					phase: "validate",
+					detail: { max: opt.max, actual: len }
+				});
+			}
+		}
+	};
+}
+
+/**
+ * datasetから length ルールを生成する
+ * - data-tig-rules-length が無ければ null
+ * - オプションは data-tig-rules-length-xxx から読む
+ *
+ * 対応する data 属性（dataset 名）
+ * - data-tig-rules-length                     -> dataset.tigRulesLength
+ * - data-tig-rules-length-max                 -> dataset.tigRulesLengthMax
+ * - data-tig-rules-length-overflow-input      -> dataset.tigRulesLengthOverflowInput
+ * - data-tig-rules-length-unit                -> dataset.tigRulesLengthUnit
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {Rule|null}
+ */
+length.fromDataset = function fromDataset(dataset, _el) {
+	// ON判定
+	if (dataset.tigRulesLength == null) {
+		return null;
+	}
+
+	/** @type {LengthRuleOptions} */
+	const options = {};
+
+	const max = parseDatasetNumber(dataset.tigRulesLengthMax);
+	if (max != null) {
+		options.max = max;
+	}
+
+	const overflowInput = parseDatasetEnum(
+		dataset.tigRulesLengthOverflowInput,
+		["block", "error"]
+	);
+	if (overflowInput != null) {
+		options.overflowInput = overflowInput;
+	}
+
+	const unit = parseDatasetEnum(
+		dataset.tigRulesLengthUnit,
+		["grapheme", "utf-16", "utf-32"]
+	);
+	if (unit != null) {
+		options.unit = unit;
+	}
+
+	return length(options);
 };
 
 /**
@@ -6379,6 +6830,7 @@ const auto = new InputGuardAutoAttach(attach, [
 	{ name: "kana", fromDataset: kana.fromDataset },
 	{ name: "ascii", fromDataset: ascii.fromDataset },
 	{ name: "filter", fromDataset: filter.fromDataset },
+	{ name: "length", fromDataset: length.fromDataset },
 	{ name: "prefix", fromDataset: prefix.fromDataset },
 	{ name: "suffix", fromDataset: suffix.fromDataset },
 	{ name: "trim", fromDataset: trim.fromDataset }
@@ -6400,6 +6852,7 @@ const rules = {
 	kana,
 	ascii,
 	filter,
+	length,
 	prefix,
 	suffix,
 	trim
@@ -6407,11 +6860,11 @@ const rules = {
 
 /**
  * バージョン（ビルド時に置換したいならここを差し替える）
- * 例: rollup replace で ""0.1.4"" を package.json の version に置換
+ * 例: rollup replace で ""0.1.5"" を package.json の version に置換
  */
 // @ts-ignore
 // eslint-disable-next-line no-undef
-const version = "0.1.4" ;
+const version = "0.1.5" ;
 
 exports.ascii = ascii;
 exports.attach = attach;
@@ -6421,6 +6874,7 @@ exports.comma = comma;
 exports.digits = digits;
 exports.filter = filter;
 exports.kana = kana;
+exports.length = length;
 exports.numeric = numeric;
 exports.prefix = prefix;
 exports.rules = rules;

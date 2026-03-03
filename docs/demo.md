@@ -47,7 +47,7 @@ const guard = attach(input, {
 });
 ```
 
-### 半角英数字
+### ASCII大文字＋数字
 
 - アルファベットの大文字と数値を許可
 - 特定の記号のみ許可
@@ -80,11 +80,12 @@ const guard = attach(input, {
 });
 ```
 
-### 旧Windowsとの互換
+### レガシーWindows互換（CP932）
 
-- Windows31-J(cp932) のみ入力可能
-    - 髙は入力可能
-    - 圡は入力不可
+- Windows-31J（CP932）で表現できる文字だけ許可
+- 旧来のWindows依存システムで「送信すると文字化け/登録失敗」しやすい文字を事前に弾く用途
+    - `髙` は入力可能（CP932にある）
+    - `圡` は入力不可（CP932に無い）
 
 <iframe
   :src="withBase('/demo/text-test3.html')"
@@ -98,7 +99,7 @@ const guard = attach(input, {
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
 
-const input = document.getElementById("code");
+const input = document.getElementById("name");
 const guard = attach(input, {
 	rules: [
 		rules.filter({
@@ -108,15 +109,15 @@ const guard = attach(input, {
 });
 ```
 
-### Unicodeに完全対応していないシステムとの互換
+### 古いUnicode前提システム向け（BMPのみ）
 
-- サロゲートペアが入った文字に対応しない
-    - 圡は入力可能
-    - 𡈽は入力不可
-- 異体字セレクタなどのグラフェムとコードポイントの数との不一致に対応しない
-    - ☺は入力可能
-    - ☺︎は入力不可
-    - あ゙は入力不可
+- BMP外（サロゲートペアが必要な文字）を許可しない
+    - `圡`は入力可能
+    - `𡈽`は入力不可
+- 複数コードポイントで構成される見た目の文字を許可しない
+    - `☺` は入力可能（単一コードポイント）
+    - `☺︎` は入力不可（絵文字＋異体字セレクタで複数コードポイント）
+    - `あ゙` は入力不可（結合文字で複数コードポイント）
 
 <iframe
   :src="withBase('/demo/text-test4.html')"
@@ -130,7 +131,7 @@ const guard = attach(input, {
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
 
-const input = document.getElementById("code");
+const input = document.getElementById("name");
 const guard = attach(input, {
 	rules: [
 		rules.filter({

@@ -157,6 +157,30 @@ type GuardContext = {
      */
     composing: boolean;
     /**
+     * - 直前の入力操作種別（insertText / insertFromPaste / insertCompositionText 等）
+     */
+    inputType: string | null;
+    /**
+     * - 挿入前の全文字列（置換範囲は除去済み）
+     */
+    beforeText: string;
+    /**
+     * - 挿入位置/置換開始位置（selectionStart）
+     */
+    replaceStart: number;
+    /**
+     * - 置換終了位置（selectionEnd）
+     */
+    replaceEnd: number;
+    /**
+     * - 挿入された文字列
+     */
+    insertedText: string;
+    /**
+     * - 挿入後の全文字列（後で代入する）
+     */
+    afterText: string;
+    /**
      * - エラーを登録する関数
      */
     pushError: (e: TigError) => void;
@@ -567,6 +591,51 @@ type FilterRuleOptions = {
 };
 
 /**
+ * length ルールを生成する
+ * @param {LengthRuleOptions} [options]
+ * @returns {import("../text-input-guard.js").Rule}
+ */
+declare function length(options?: LengthRuleOptions): Rule;
+declare namespace length {
+    /**
+     * datasetから length ルールを生成する
+     * - data-tig-rules-length が無ければ null
+     * - オプションは data-tig-rules-length-xxx から読む
+     *
+     * 対応する data 属性（dataset 名）
+     * - data-tig-rules-length                     -> dataset.tigRulesLength
+     * - data-tig-rules-length-max                 -> dataset.tigRulesLengthMax
+     * - data-tig-rules-length-overflow-input      -> dataset.tigRulesLengthOverflowInput
+     * - data-tig-rules-length-unit                -> dataset.tigRulesLengthUnit
+     *
+     * @param {DOMStringMap} dataset
+     * @param {HTMLInputElement|HTMLTextAreaElement} _el
+     * @returns {import("../text-input-guard.js").Rule|null}
+     */
+    function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
+}
+/**
+ * length ルールのオプション
+ */
+type LengthRuleOptions = {
+    /**
+     * - 最大長（グラフェム数）。未指定なら制限なし
+     */
+    max?: number;
+    /**
+     * - 入力中に最大長を超えたときの挙動
+     */
+    overflowInput?: "block" | "error";
+    /**
+     * - 長さの単位
+     *
+     * block   : 最大長を超える部分を切る
+     * error   : エラーを積むだけ（値は変更しない）
+     */
+    unit?: "grapheme" | "utf-16" | "utf-32";
+};
+
+/**
  * The script is part of TextInputGuard.
  *
  * AUTHOR:
@@ -711,6 +780,7 @@ declare namespace rules {
     export { kana };
     export { ascii };
     export { filter };
+    export { length };
     export { prefix };
     export { suffix };
     export { trim };
@@ -721,4 +791,4 @@ declare namespace rules {
  */
 declare const version: any;
 
-export { ascii, attach, attachAll, autoAttach, comma, digits, filter, kana, numeric, prefix, rules, suffix, trim, version };
+export { ascii, attach, attachAll, autoAttach, comma, digits, filter, kana, length, numeric, prefix, rules, suffix, trim, version };
