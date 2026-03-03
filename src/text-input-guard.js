@@ -74,12 +74,13 @@ import { SwapState } from "./swap-state.js";
  * @property {boolean} warn - warnログを出すかどうか
  * @property {string} invalidClass - エラー時に付与するclass名
  * @property {boolean} composing - IME変換中かどうか
- * @property {string} lastAcceptedValue - 直前に受理した表示値
- * @property {SelectionState} lastAcceptedSelection - 直前に受理したselection
  * @property {string|null} inputType - 直前の入力操作種別（insertText / insertFromPaste / insertCompositionText 等）
- * @property {string|null} inputData - 直前の入力操作で挿入される文字列（取れない場合あり）
+ * @property {string} beforeText - 挿入前の全文字列（置換範囲は除去済み）
+ * @property {number} replaceStart - 挿入位置/置換開始位置（selectionStart）
+ * @property {number} replaceEnd - 置換終了位置（selectionEnd）
+ * @property {string} insertedText - 挿入された文字列
+ * @property {string} afterText - 挿入後の全文字列（後で代入する）
  * @property {(e: TigError) => void} pushError - エラーを登録する関数
- * @property {(req: SelectionRequest) => void} requestSelection - 選択範囲を変更する要求
  * @property {(req: RevertRequest) => void} requestRevert - 入力を直前の受理値へ巻き戻す要求
  */
 
@@ -89,7 +90,7 @@ import { SwapState } from "./swap-state.js";
  * @typedef {Object} BeforeInputSnapshot
  * @property {SelectionState} selection - 入力反映前の選択範囲（挿入/置換位置の判定に使用）
  * @property {string|null} inputType - 入力種別（insertText / insertFromPaste / deleteContentBackward 等）
- * @property {string|null} inputData - 挿入された文字列（通常入力時に取得できる場合あり）
+ * @property {string|null} insertedText - 挿入された文字列（通常入力時に取得できる場合あり）
  */
 
 /**
@@ -129,12 +130,6 @@ import { SwapState } from "./swap-state.js";
  * @property {number|null} start - selectionStart
  * @property {number|null} end - selectionEnd
  * @property {"forward"|"backward"|"none"|null} direction - selectionDirection
- */
-
-/**
- * selection要求（表示要素の選択範囲を変更する指示）
- * - SelectionState に reason を追加したもの
- * @typedef {SelectionState & { reason?: string, detail?: any }} SelectionRequest
  */
 
 /**
@@ -407,12 +402,6 @@ class InputGuard {
 		this.beforeInputSnapshot = null;
 
 		/**
-		 * ルールからの選択範囲変更要求
-		 * @type {SelectionRequest|null}
-		 */
-		this.selectionRequest = null;
-
-		/**
 		 * ルールからのrevert要求
 		 * @type {RevertRequest|null}
 		 */
@@ -677,10 +666,70 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtx() {
-		// beforeinput が取れていればそれを優先。無い場合は受理済み値を基準にする
 		const snap = this.beforeInputSnapshot;
-		const inputType = snap ? snap.inputType : "";
-		const inputData = snap ? snap.inputData : "";
+		const inputType = snap?.inputType ?? "";
+		const insertedText = snap?.insertedText ?? "";
+
+		// 受理済み（正規化済み）の全文を「今回の編集の基準」として使う
+		// display.value はブラウザ側の編集結果が混ざるので、差分再構成の基準にはしない
+		const beforeText = this.lastAcceptedValue ?? "";
+
+		// selection は2系統ある：
+		// - snapSel: beforeinput 時点で取得した selection（今回の編集の基準点になり得る）
+		// - lastSel: ユーザー操作（keyup/mouseup/select 等）で追跡している selection（常にUIの見た目に近い）
+		//
+		// 基本は snapSel を優先するが、IME が絡むと snapSel が「変換中の範囲（composition range）」を指して
+		// “本当のキャレット位置” と一致しないことがあるため、その場合は lastSel を採用する。
+		const snapSel = snap?.selection ?? null;
+		const lastSel = this.lastAcceptedSelection;
+
+		// 通常は beforeinput の selection（snapSel）を使うのが一番正確
+		let baseSel = snapSel ?? lastSel;
+
+		// IME由来の入力（変換中の確定/更新など）は、beforeinput の selection が
+		// 「IMEが管理する範囲」になってしまうことがある。
+		// この場合 snapSel を使うと “勝手に上書き” が起きやすいので lastSel に寄せる。
+		const isCompositionInput =
+			this.composing ||
+			inputType === "insertCompositionText" ||
+			inputType === "deleteCompositionText" ||
+			inputType === "insertFromComposition";
+
+		// もう一つの検知：snapSel が「範囲選択」なのに lastSel が「キャレットのみ」なら、
+		// その範囲はユーザーが選択したのではなく、IMEが作っている範囲である可能性が高い。
+		// （例：12|34 に 5 を入れたいのに、IME範囲を置換して 1254 になる、など）
+		const looksLikeImeRange =
+			snapSel &&
+			(snapSel.start !== snapSel.end) &&
+			(lastSel.start === lastSel.end) &&
+			(inputType === "insertText" || inputType === "insertCompositionText");
+
+		if (isCompositionInput || looksLikeImeRange) {
+			baseSel = lastSel;
+		}
+
+		let replaceStart = baseSel.start ?? 0;
+		let replaceEnd = baseSel.end ?? 0;
+
+		// Backspace / Delete は「挿入文字がない（dataがnull）」ことが多い。
+		// そのままだと差分再構成で “何も変わらない” 扱いになって削除が効かなくなるため、
+		// 選択範囲が無い場合は「削除される1文字ぶん」の置換範囲をここで作る。
+		//
+		// ※ 選択範囲がある削除は replaceStart!=replaceEnd なので補正不要（その範囲を消すだけでよい）
+		if (replaceStart === replaceEnd) {
+			if (inputType === "deleteContentBackward") {
+				// Backspace: キャレットの左側1文字を削除
+				replaceStart = Math.max(0, replaceStart - 1);
+				replaceEnd = snapSel.start ?? replaceEnd;
+			} else if (inputType === "deleteContentForward") {
+				// Delete: キャレットの右側1文字を削除
+				replaceStart = snapSel.start ?? replaceStart;
+				replaceEnd = Math.min(beforeText.length, replaceEnd + 1);
+			}
+			// 追加で拾うならここ：
+			// deleteWordBackward / deleteWordForward / deleteByCut / deleteSoftLineBackward ... etc
+		}
+
 		return {
 			hostElement: this.hostElement,
 			displayElement: this.displayElement,
@@ -689,16 +738,13 @@ class InputGuard {
 			warn: this.warn,
 			invalidClass: this.invalidClass,
 			composing: this.composing,
-			lastAcceptedValue: this.lastAcceptedValue,
-			lastAcceptedSelection: this.lastAcceptedSelection,
 			inputType,
-			inputData,
+			beforeText,
+			replaceStart,
+			replaceEnd,
+			insertedText,
+			afterText: null, // 後で代入する
 			pushError: (e) => this.errors.push(e),
-			requestSelection: (req) => {
-				if (!this.selectionRequest) {
-					this.selectionRequest = req;
-				}
-			},
 			requestRevert: (req) => {
 				// 1回でもrevert要求が出たら採用（最初の理由を保持）
 				if (!this.revertRequest) {
@@ -875,8 +921,8 @@ class InputGuard {
 		/** @type {string|null} */
 		const inputType = typeof e.inputType === "string" ? e.inputType : null;
 		/** @type {string|null} */
-		const inputData = typeof e.data === "string" ? e.data : null;
-		this.beforeInputSnapshot = { selection, inputType, inputData };
+		const insertedText = typeof e.data === "string" ? e.data : null;
+		this.beforeInputSnapshot = { selection, inputType, insertedText };
 	}
 
 	/**
@@ -889,7 +935,7 @@ class InputGuard {
 	}
 
 	/**
-	 * focusイベント：表示整形（カンマ等）を剥がして編集しやすい状態にする
+	 * focusイベント：表示整形を剥がして編集しやすい状態にする
 	 * - validate は走らせない（触っただけで赤くしたくないため）
 	 * @returns {void}
 	 */
@@ -900,9 +946,10 @@ class InputGuard {
 		const current = display.value;
 
 		const ctx = this.createCtx();
+		ctx.afterText = current;
 
 		let v = current;
-		v = this.runNormalizeChar(v, ctx);       // カンマ除去が効く
+		v = this.runNormalizeChar(v, ctx);
 		v = this.runNormalizeStructure(v, ctx);
 
 		if (v !== current) {
@@ -970,6 +1017,83 @@ class InputGuard {
 	}
 
 	/**
+	 * evaluateInput専用createCtx（ルール実行に渡すコンテキストを作り、正規箇所も実行する）
+	 *
+	 * - CTX を作成する中で、文字の正規化と構造の正規化を行い、CTXのその情報に合わせる
+	 * - runNormalizeChar に対して入力した文字のみを入れることで、処理の高速化とキャレットズレが起きないように制御する
+	 * - runNormalizeStructure は全体の文字を入れるため、ここでの処理はキャレットズレが起きる可能性がある
+	 * @returns {GuardContext}
+	 */
+	createCtxAndNormalize() {
+		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+		const current = display.value;
+		const ctx = this.createCtx();
+		ctx.afterText = current;
+
+		// 元のテキスト
+		const beforeText = ctx.beforeText;
+
+		// 追加入力したテキスト
+		let insertedText = ctx.insertedText;
+
+		// 左端の挿入箇所
+		const replaceStart = ctx.replaceStart;
+
+		// 現状のテキスト
+		const tempText = current;
+
+		// 作成する全体のテキスト
+		let newText = beforeText;
+
+		if (ctx.replaceStart !== ctx.replaceEnd) {
+			// 選択範囲の前までと、選択範囲の後ろを結合して、間（選択部分）を削除する
+			newText = beforeText.slice(0, ctx.replaceStart) + beforeText.slice(ctx.replaceEnd);
+		}
+
+		// CTX の情報を最新の情報へ更新する
+		ctx.beforeText = newText;
+
+		// 挿入するテキストのみ文字チェックを行う
+		const normalizeCharText = this.runNormalizeChar(insertedText, ctx);
+		insertedText = normalizeCharText;
+
+		// 作成したテキストを挿入する
+		newText = newText.slice(0, replaceStart) + insertedText + newText.slice(replaceStart);
+
+		// 挿入したテキストの右側にカーソル位置をずらす
+		// insertedText は UTF-16 code unit 長なので、
+		// Selection は JS の index（UTF-16）前提で計算
+		/**
+		 * @type {SelectionState}
+		 */
+		let newSelection = { start: replaceStart + insertedText.length, end: replaceStart + insertedText.length, direction: "forward" };
+
+		// 挿入後文章全体に構造チェックを行う
+		const normalizeStructureText = this.runNormalizeStructure(newText, ctx);
+
+		// 構成した文章がずれていた場合、カーソル位置の見直しを行う
+		if (newText !== normalizeStructureText) {
+			newText = normalizeStructureText;
+			// 入力した実際のテキスト(tempText)から、現在位置から左側のみ切り出して、左側のみ再チェックする
+			// 文章の長さに依存した変更があった場合は厳しいが、それ以外は以下の方法で切り抜けられる可能性が高い
+			let leftText = tempText.slice(0, replaceStart);
+			leftText = this.runNormalizeChar(leftText, ctx);
+			leftText = this.runNormalizeStructure(leftText, ctx);
+			const newPos = Math.min(leftText.length, newText.length);
+			newSelection = { start: newPos, end: newPos, direction: "forward" };
+		}
+
+		// 画面を更新
+		this.syncDisplay(newText);
+		this.writeSelection(display, newSelection);
+
+		// CTX の情報を最新の情報へ更新する
+		ctx.afterText = newText;
+
+		return ctx;
+	}
+
+	/**
 	 * 入力中の評価（IME中は何もしない）
 	 * - 固定順：normalize.char → normalize.structure → validate
 	 * - 値が変わったら display に反映し、raw も同期する
@@ -981,24 +1105,12 @@ class InputGuard {
 		}
 
 		this.clearErrors();
-		this.selectionRequest = null;
 		this.revertRequest = null;
 
 		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-		const current = display.value;
 
-		const ctx = this.createCtx();
-
-		// raw候補（入力中は表示値＝rawとして扱う）
-		let raw = current;
-
-		raw = this.runNormalizeChar(raw, ctx);
-		raw = this.runNormalizeStructure(raw, ctx);
-
-		// normalizeで変わったら反映（selection補正）
-		if (raw !== current) {
-			this.setDisplayValuePreserveCaret(display, raw, ctx);
-		}
+		const ctx = this.createCtxAndNormalize();
+		const raw = ctx.afterText;
 
 		// validate（入力中：エラー出すだけ）
 		this.runValidate(raw, ctx);
@@ -1007,10 +1119,6 @@ class InputGuard {
 			// revert要求が出たら巻き戻して終了
 			this.revertDisplay(this.revertRequest);
 			return;
-		} else if (this.selectionRequest) {
-			// selection変更要求が出たら反映（blockもここで）
-			const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-			this.writeSelection(display, this.selectionRequest);
 		}
 
 		// rawは常に最新に（swapでも非swapでもOK）
@@ -1042,6 +1150,7 @@ class InputGuard {
 
 		// 1) raw候補（displayから取得）
 		let raw = display.value;
+		ctx.afterText = raw;
 
 		// 2) 正規化（rawとして扱う形に揃える）
 		raw = this.runNormalizeChar(raw, ctx);
@@ -1055,7 +1164,6 @@ class InputGuard {
 			this.revertDisplay(this.revertRequest);
 			return;
 		}
-		// selectionRequest は commit では特に意味がない想定なので無視
 
 		// 4) commitのみの補正（丸め・切り捨て・繰り上がりなど）
 		raw = this.runFix(raw, ctx);

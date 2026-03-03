@@ -106,29 +106,29 @@ const cutTextByUnit = function(text, unit, max) {
 
 /**
  * 元のテキストと追加のテキストの合計が max を超える場合、追加のテキストを切って合計が max に収まるようにする
- * @param {string} orgText 元のテキスト
- * @param {string} addText 追加するテキスト
+ * @param {string} beforeText 元のテキスト
+ * @param {string} insertedText 追加するテキスト
  * @param {"grapheme"|"utf-16"|"utf-32"} unit
  * @param {number} max
- * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は addText をそのまま返す）
+ * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は insertedText をそのまま返す）
  */
-const cutLength = function(orgText, addText, unit, max) {
-	const orgLen = getTextLengthByUnit(orgText, unit);
+const cutLength = function(beforeText, insertedText, unit, max) {
+	const orgLen = getTextLengthByUnit(beforeText, unit);
 
 	// すでに最大長を超えている場合は追加のテキストを全て切る
 	if (orgLen >= max) { return ""; }
 
-	const addLen = getTextLengthByUnit(addText, unit);
+	const addLen = getTextLengthByUnit(insertedText, unit);
 	const totalLen = orgLen + addLen;
 
 	if (totalLen <= max) {
 		// 今回の追加で範囲内に収まるなら何もしない
-		return addText;
+		return insertedText;
 	}
 
 	// 超える場合は追加のテキストを切る
 	const allowedAddLen = max - orgLen;
-	return cutTextByUnit(addText, unit, allowedAddLen);
+	return cutTextByUnit(insertedText, unit, allowedAddLen);
 };
 
 /**
@@ -148,7 +148,7 @@ export function length(options = {}) {
 		name: "length",
 		targets: ["input", "textarea"],
 
-		normalizeStructure(value, ctx) {
+		normalizeChar(value, ctx) {
 			// block 以外は何もしない
 			if (opt.overflowInput !== "block") {
 				return value;
@@ -158,23 +158,14 @@ export function length(options = {}) {
 				return value;
 			}
 
-			const orgText = ctx.lastAcceptedValue;
-			const startPosition = ctx.lastAcceptedSelection.start;
-			const addText = ctx.inputData;
-			if (addText === null || addText === undefined) {
+			const beforeText = ctx.beforeText;
+			const insertedText = ctx.insertedText;
+			if (insertedText === "") {
 				return value;
 			}
-			const cutText = cutLength(orgText, addText, opt.unit, opt.max);
-			const newValue = orgText.slice(0, startPosition) + cutText + orgText.slice(startPosition);
 
-			// cutText.length は UTF-16 code unit 長なので、
-			// Selection は JS の index（UTF-16）前提で計算
-			/**
-			 * @type {import("../text-input-guard.js").SelectionState}
-			 */
-			const newSelection = { start: startPosition + cutText.length, end: startPosition + cutText.length, direction: "forward" };
-			ctx.requestSelection(newSelection);
-			return newValue;
+			const cutText = cutLength(beforeText, insertedText, opt.unit, opt.max);
+			return cutText;
 		},
 
 		validate(value, ctx) {

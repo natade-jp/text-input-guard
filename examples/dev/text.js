@@ -6,7 +6,7 @@ const output = document.getElementById("output");
 const guard = attach(input, {
 	rules: [
 		rules.length({
-			max: 1, overflowInput: "block", unit: "utf-16"
+			max: 5, overflowInput: "block", unit: "utf-16"
 		})
 	]
 });
