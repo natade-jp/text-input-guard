@@ -12,11 +12,11 @@ import Mojix from "./libs/mojix.js";
 import { parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
 
 /**
- * length ルールのオプション
- * @typedef {Object} LengthRuleOptions
+ * bytes ルールのオプション
+ * @typedef {Object} BytesRuleOptions
  * @property {number} [max] - 最大長（グラフェム数）。未指定なら制限なし
  * @property {"block"|"error"} [overflowInput="block"] - 入力中に最大長を超えたときの挙動
- * @property {"grapheme"|"utf-16"|"utf-32"} [unit="grapheme"] - 長さの単位
+ * @property {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} [unit="utf-8"] - サイズの単位(sjis系を使用する場合はfilterも必須)
  *
  * block   : 最大長を超える部分を切る
  * error   : エラーを積むだけ（値は変更しない）
@@ -30,16 +30,21 @@ import { parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
 /**
  * グラフェム/UTF-16コード単位/UTF-32コード単位の長さを調べる
  * @param {string} text
- * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @returns {number}
  */
-const getTextLengthByUnit = function(text, unit) {
-	if (unit === "grapheme") {
-		return Mojix.toMojiArrayFromString(text).length;
+const getTextBytesByUnit = function(text, unit) {
+	if (text.length === 0) {
+		return 0;
+	}
+	if (unit === "utf-8") {
+		return Mojix.toUTF8Array(text).length;
 	} else if (unit === "utf-16") {
-		return Mojix.toUTF16Array(text).length;
+		return Mojix.toUTF16Array(text).length * 2;
 	} else if (unit === "utf-32") {
-		return Mojix.toUTF32Array(text).length;
+		return Mojix.toUTF32Array(text).length * 4;
+	} else if (unit === "sjis" || unit === "cp932") {
+		return Mojix.encode(text, "Shift_JIS").length;
 	} else {
 		// ここには来ない
 		throw new Error(`Invalid unit: ${unit}`);
@@ -49,7 +54,7 @@ const getTextLengthByUnit = function(text, unit) {
 /**
  * グラフェム/UTF-16コード単位/UTF-32コード単位でテキストを切る
  * @param {string} text
- * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
  * @returns {string}
  */
@@ -75,19 +80,18 @@ const cutTextByUnit = function(text, unit, max) {
 		const g = graphemeArray[i];
 
 		// 1グラフェムあたりの長さ
-		let graphemeCount = 0;
-		if (unit === "grapheme") {
-			graphemeCount = 1;
+		let byteCount = 0;
+		if (unit === "utf-8") {
+			byteCount = Mojix.toUTF8Array(Mojix.toStringFromMojiArray([g])).length;
 		} else if (unit === "utf-16") {
-			graphemeCount = 0;
-			for (let i = 0; i < g.length; i++) {
-				graphemeCount += (g[i] > 0xFFFF) ? 2 : 1;
-			}
+			byteCount = Mojix.toUTF16Array(Mojix.toStringFromMojiArray([g])).length * 2;
 		} else if (unit === "utf-32") {
-			graphemeCount = g.length;
+			byteCount = Mojix.toUTF32Array(Mojix.toStringFromMojiArray([g])).length * 4;
+		} else if (unit === "sjis" || unit === "cp932") {
+			byteCount = Mojix.encode(Mojix.toStringFromMojiArray([g]), "Shift_JIS").length;
 		}
 
-		if (count + graphemeCount > max) {
+		if (count + byteCount > max) {
 			// 空配列を渡すとNUL文字を返すため、空配列のときは空文字を返す
 			if (outputGraphemeArray.length === 0) {
 				return "";
@@ -96,7 +100,7 @@ const cutTextByUnit = function(text, unit, max) {
 			return Mojix.toStringFromMojiArray(outputGraphemeArray);
 		}
 
-		count += graphemeCount;
+		count += byteCount;
 		outputGraphemeArray.push(g);
 	}
 
@@ -108,17 +112,17 @@ const cutTextByUnit = function(text, unit, max) {
  * 元のテキストと追加のテキストの合計が max を超える場合、追加のテキストを切って合計が max に収まるようにする
  * @param {string} beforeText 元のテキスト
  * @param {string} insertedText 追加するテキスト
- * @param {"grapheme"|"utf-16"|"utf-32"} unit
+ * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
  * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は insertedText をそのまま返す）
  */
-const cutLength = function(beforeText, insertedText, unit, max) {
-	const beforeTextLen = getTextLengthByUnit(beforeText, unit);
+const cutBytes = function(beforeText, insertedText, unit, max) {
+	const beforeTextLen = getTextBytesByUnit(beforeText, unit);
 
 	// すでに最大長を超えている場合は追加のテキストを全て切る
 	if (beforeTextLen >= max) { return ""; }
 
-	const insertedTextLen = getTextLengthByUnit(insertedText, unit);
+	const insertedTextLen = getTextBytesByUnit(insertedText, unit);
 	const totalLen = beforeTextLen + insertedTextLen;
 
 	if (totalLen <= max) {
@@ -132,20 +136,20 @@ const cutLength = function(beforeText, insertedText, unit, max) {
 };
 
 /**
- * length ルールを生成する
- * @param {LengthRuleOptions} [options]
+ * bytes ルールを生成する
+ * @param {BytesRuleOptions} [options]
  * @returns {import("../text-input-guard.js").Rule}
  */
-export function length(options = {}) {
-	/** @type {LengthRuleOptions} */
+export function bytes(options = {}) {
+	/** @type {BytesRuleOptions} */
 	const opt = {
 		max: typeof options.max === "number" ? options.max : undefined,
 		overflowInput: options.overflowInput ?? "block",
-		unit: options.unit ?? "grapheme"
+		unit: options.unit ?? "utf-8"
 	};
 
 	return {
-		name: "length",
+		name: "bytes",
 		targets: ["input", "textarea"],
 
 		normalizeChar(value, ctx) {
@@ -158,7 +162,7 @@ export function length(options = {}) {
 				return value;
 			}
 
-			const cutText = cutLength(ctx.beforeText, value, opt.unit, opt.max);
+			const cutText = cutBytes(ctx.beforeText, value, opt.unit, opt.max);
 			return cutText;
 		},
 
@@ -172,11 +176,11 @@ export function length(options = {}) {
 				return;
 			}
 
-			const len = getTextLengthByUnit(value, opt.unit);
+			const len = getTextBytesByUnit(value, opt.unit);
 			if (len > opt.max) {
 				ctx.pushError({
-					code: "length.max_overflow",
-					rule: "length",
+					code: "bytes.max_overflow",
+					rule: "bytes",
 					phase: "validate",
 					detail: { max: opt.max, actual: len }
 				});
@@ -186,36 +190,36 @@ export function length(options = {}) {
 }
 
 /**
- * datasetから length ルールを生成する
- * - data-tig-rules-length が無ければ null
- * - オプションは data-tig-rules-length-xxx から読む
+ * datasetから bytes ルールを生成する
+ * - data-tig-rules-bytes が無ければ null
+ * - オプションは data-tig-rules-bytes-xxx から読む
  *
  * 対応する data 属性（dataset 名）
- * - data-tig-rules-length                     -> dataset.tigRulesLength
- * - data-tig-rules-length-max                 -> dataset.tigRulesLengthMax
- * - data-tig-rules-length-overflow-input      -> dataset.tigRulesLengthOverflowInput
- * - data-tig-rules-length-unit                -> dataset.tigRulesLengthUnit
+ * - data-tig-rules-bytes                     -> dataset.tigRulesBytes
+ * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
+ * - data-tig-rules-bytes-overflow-input      -> dataset.tigRulesBytesOverflowInput
+ * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
  *
  * @param {DOMStringMap} dataset
  * @param {HTMLInputElement|HTMLTextAreaElement} _el
  * @returns {import("../text-input-guard.js").Rule|null}
  */
-length.fromDataset = function fromDataset(dataset, _el) {
+bytes.fromDataset = function fromDataset(dataset, _el) {
 	// ON判定
-	if (dataset.tigRulesLength == null) {
+	if (dataset.tigRulesBytes == null) {
 		return null;
 	}
 
-	/** @type {LengthRuleOptions} */
+	/** @type {BytesRuleOptions} */
 	const options = {};
 
-	const max = parseDatasetNumber(dataset.tigRulesLengthMax);
+	const max = parseDatasetNumber(dataset.tigRulesBytesMax);
 	if (max != null) {
 		options.max = max;
 	}
 
 	const overflowInput = parseDatasetEnum(
-		dataset.tigRulesLengthOverflowInput,
+		dataset.tigRulesBytesOverflowInput,
 		["block", "error"]
 	);
 	if (overflowInput != null) {
@@ -223,12 +227,12 @@ length.fromDataset = function fromDataset(dataset, _el) {
 	}
 
 	const unit = parseDatasetEnum(
-		dataset.tigRulesLengthUnit,
-		["grapheme", "utf-16", "utf-32"]
+		dataset.tigRulesBytesUnit,
+		["utf-8", "utf-16", "utf-32", "sjis", "cp932"]
 	);
 	if (unit != null) {
 		options.unit = unit;
 	}
 
-	return length(options);
+	return bytes(options);
 };
