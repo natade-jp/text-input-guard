@@ -636,6 +636,100 @@ type LengthRuleOptions = {
 };
 
 /**
+ * width ルールのオプション
+ * @typedef {Object} WidthRuleOptions
+ * @property {number} [max] - 最大長（全角は2, 半角は1）
+ * @property {"block"|"error"} [overflowInput="block"] - 入力中に最大長を超えたときの挙動
+ *
+ * block   : 最大長を超える部分を切る
+ * error   : エラーを積むだけ（値は変更しない）
+ */
+/**
+ * width ルールを生成する
+ * @param {WidthRuleOptions} [options]
+ * @returns {import("../text-input-guard.js").Rule}
+ */
+declare function width(options?: WidthRuleOptions): Rule;
+declare namespace width {
+    /**
+     * datasetから length ルールを生成する
+     * - data-tig-rules-length が無ければ null
+     * - オプションは data-tig-rules-length-xxx から読む
+     *
+     * 対応する data 属性（dataset 名）
+     * - data-tig-rules-length                     -> dataset.tigRulesWidth
+     * - data-tig-rules-length-max                 -> dataset.tigRulesWidthMax
+     * - data-tig-rules-length-overflow-input      -> dataset.tigRulesWidthOverflowInput
+     *
+     * @param {DOMStringMap} dataset
+     * @param {HTMLInputElement|HTMLTextAreaElement} _el
+     * @returns {import("../text-input-guard.js").Rule|null}
+     */
+    function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
+}
+/**
+ * width ルールのオプション
+ */
+type WidthRuleOptions = {
+    /**
+     * - 最大長（全角は2, 半角は1）
+     */
+    max?: number;
+    /**
+     * - 入力中に最大長を超えたときの挙動
+     *
+     * block   : 最大長を超える部分を切る
+     * error   : エラーを積むだけ（値は変更しない）
+     */
+    overflowInput?: "block" | "error";
+};
+
+/**
+ * bytes ルールを生成する
+ * @param {BytesRuleOptions} [options]
+ * @returns {import("../text-input-guard.js").Rule}
+ */
+declare function bytes(options?: BytesRuleOptions): Rule;
+declare namespace bytes {
+    /**
+     * datasetから bytes ルールを生成する
+     * - data-tig-rules-bytes が無ければ null
+     * - オプションは data-tig-rules-bytes-xxx から読む
+     *
+     * 対応する data 属性（dataset 名）
+     * - data-tig-rules-bytes                     -> dataset.tigRulesBytes
+     * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
+     * - data-tig-rules-bytes-overflow-input      -> dataset.tigRulesBytesOverflowInput
+     * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
+     *
+     * @param {DOMStringMap} dataset
+     * @param {HTMLInputElement|HTMLTextAreaElement} _el
+     * @returns {import("../text-input-guard.js").Rule|null}
+     */
+    function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
+}
+/**
+ * bytes ルールのオプション
+ */
+type BytesRuleOptions = {
+    /**
+     * - 最大長（グラフェム数）。未指定なら制限なし
+     */
+    max?: number;
+    /**
+     * - 入力中に最大長を超えたときの挙動
+     */
+    overflowInput?: "block" | "error";
+    /**
+     * - サイズの単位(sjis系を使用する場合はfilterも必須)
+     *
+     * block   : 最大長を超える部分を切る
+     * error   : エラーを積むだけ（値は変更しない）
+     */
+    unit?: "utf-8" | "utf-16" | "utf-32" | "sjis" | "cp932";
+};
+
+/**
  * The script is part of TextInputGuard.
  *
  * AUTHOR:
@@ -781,6 +875,8 @@ declare namespace rules {
     export { ascii };
     export { filter };
     export { length };
+    export { width };
+    export { bytes };
     export { prefix };
     export { suffix };
     export { trim };
@@ -791,4 +887,4 @@ declare namespace rules {
  */
 declare const version: any;
 
-export { ascii, attach, attachAll, autoAttach, comma, digits, filter, kana, length, numeric, prefix, rules, suffix, trim, version };
+export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, kana, length, numeric, prefix, rules, suffix, trim, version, width };

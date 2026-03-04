@@ -23,6 +23,11 @@
 				rules: [
 					rules.filter({
 						category: ["cp932-only"]
+					}),
+					rules.bytes({
+						max: 10,
+						overflowInput: "block",
+						unit: "cp932"
 					})
 				]
 			});

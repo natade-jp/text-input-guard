@@ -50,7 +50,7 @@ const guard = attach(input, {
 ### ASCII大文字＋数字
 
 - アルファベットの大文字と数値を許可
-- 特定の記号のみ許可
+- 記号は正規表現で `-_@` のみ許可
 - 前後のスペースを除去
 
 <iframe
@@ -82,7 +82,8 @@ const guard = attach(input, {
 
 ### レガシーWindows互換（CP932）
 
-- Windows-31J（CP932）で表現できる文字だけ許可
+- Windows-31J（CP932）で表現できるできる文字のみ許可
+- CP932換算で 10バイト以内 に制限
 - 旧来のWindows依存システムで「送信すると文字化け/登録失敗」しやすい文字を事前に弾く用途
     - `髙` は入力可能（CP932にある）
     - `圡` は入力不可（CP932に無い）
@@ -104,6 +105,11 @@ const guard = attach(input, {
 	rules: [
 		rules.filter({
 			category: ["cp932-only"]
+		}),
+		rules.bytes({
+			max: 10,
+			overflowInput: "block",
+			unit: "cp932"
 		})
 	]
 });
@@ -117,7 +123,8 @@ const guard = attach(input, {
 - 複数コードポイントで構成される見た目の文字を許可しない
     - `☺` は入力可能（単一コードポイント）
     - `☺︎` は入力不可（絵文字＋異体字セレクタで複数コードポイント）
-    - `あ゙` は入力不可（結合文字で複数コードポイント）
+    - `あ゙` は入力不可（ひらがな＋結合文字で複数コードポイント）
+- UTF-16換算で10文字以内（HTMLの `maxlength` と同じ数え方）
 
 <iframe
   :src="withBase('/demo/text-test4.html')"
@@ -139,6 +146,46 @@ const guard = attach(input, {
 		}),
 		rules.filter({
 			category: ["single-codepoint-only"]
+		}),
+		rules.length({
+			max: 10,
+			overflowInput: "block",
+			unit: "utf-16"
+		})
+	]
+});
+```
+
+### 文字数制限
+
+- 見た目の文字数（グラフェム）で制限
+- 結合文字などで極端に長くなるのを防ぐため バイト数制限も併用
+- `👨‍👩🏴󠁫󠁨󠀱󠀰󠁿🇦🇧１２３` → 6文字（グラフェム） / UTF-8で52バイト
+
+<iframe
+  :src="withBase('/demo/text-test5.html')"
+  style="width: 100%; border-style: none;"
+></iframe>
+
+```html
+<input id="name" type="text" />
+```
+
+```js
+import { attach, rules } from "./lib/text-input-guard.min.js";
+
+const input = document.getElementById("name");
+const guard = attach(input, {
+	rules: [
+		rules.length({
+			max: 5,
+			overflowInput: "error",
+			unit: "grapheme"
+		}),
+		rules.bytes({
+			max: 50,
+			overflowInput: "error",
+			unit: "utf-8"
 		})
 	]
 });

@@ -7,7 +7,7 @@
 	</head>
 	<body>
 		<label>
-			<input id="name" type="text" />
+			<input id="memberCode" type="text" />
 		</label>
 
 		<div id="output" class="kv"></div>
@@ -16,22 +16,24 @@
 			import { bindGuardDebug } from "./js/guard-debug.js";
 			import { attach, rules } from "./lib/text-input-guard.min.js";
 
-			const input = document.getElementById("name");
+			const input = document.getElementById("memberCode");
 			const output = document.getElementById("output");
 
 			const guard = attach(input, {
 				rules: [
-					rules.filter({
-						category: ["bmp-only"]
+					rules.ascii({
+						case: "upper"
 					}),
 					rules.filter({
-						category: ["single-codepoint-only"]
+						category: ["alpha-upper", "digits"],
+						allow: /[-_@]/
 					}),
 					rules.length({
-						max: 10,
+						max: 5,
 						overflowInput: "block",
-						unit: "utf-16"
-					})
+						unit: "grapheme"
+					}),
+					rules.trim()
 				]
 			});
 

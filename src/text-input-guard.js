@@ -665,8 +665,8 @@ class InputGuard {
 	 * ルール実行に渡すコンテキストを作る（pushErrorで errors に積める）
 	 * @returns {GuardContext}
 	 */
-	createCtx() {
-		const snap = this.beforeInputSnapshot;
+	createCtx({ useSnapshot = true } = {}) {
+		const snap = useSnapshot ? this.beforeInputSnapshot : null;
 		const inputType = snap?.inputType ?? "";
 		const insertedText = snap?.insertedText ?? "";
 
@@ -946,6 +946,8 @@ class InputGuard {
 		const current = display.value;
 
 		const ctx = this.createCtx();
+
+		ctx.beforeText = "";
 		ctx.afterText = current;
 
 		let v = current;
@@ -1146,10 +1148,11 @@ class InputGuard {
 		this.revertRequest = null;
 
 		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-		const ctx = this.createCtx();
+		const ctx = this.createCtx({ useSnapshot: false });
 
 		// 1) raw候補（displayから取得）
 		let raw = display.value;
+		ctx.beforeText = "";
 		ctx.afterText = raw;
 
 		// 2) 正規化（rawとして扱う形に揃える）

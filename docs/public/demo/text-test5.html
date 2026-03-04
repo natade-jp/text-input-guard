@@ -21,16 +21,15 @@
 
 			const guard = attach(input, {
 				rules: [
-					rules.filter({
-						category: ["bmp-only"]
-					}),
-					rules.filter({
-						category: ["single-codepoint-only"]
-					}),
 					rules.length({
-						max: 10,
-						overflowInput: "block",
-						unit: "utf-16"
+						max: 5,
+						overflowInput: "error",
+						unit: "grapheme"
+					}),
+					rules.bytes({
+						max: 50,
+						overflowInput: "error",
+						unit: "utf-8"
 					})
 				]
 			});
