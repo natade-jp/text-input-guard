@@ -67,6 +67,35 @@ type TigError = {
     detail?: any;
 };
 /**
+ * バリデーションがどの評価タイミングから呼び出されたかを表す識別子
+ *
+ * - "input"  : 入力中の評価（inputイベントなど）
+ * - "commit" : 確定時の評価（blurなど）
+ */
+type ValidateSource = "input" | "commit";
+/**
+ * バリデーション結果を表すオブジェクト
+ * - 各ルールの評価が完了したタイミングでコールバックに渡される
+ */
+type ValidateResult = {
+    /**
+     * - この結果を発生させた Guard インスタンス
+     */
+    guard: Guard;
+    /**
+     * - 評価が実行されたタイミング（input / commit）
+     */
+    source: ValidateSource;
+    /**
+     * - 発生したエラー一覧
+     */
+    errors: TigError[];
+    /**
+     * - エラーが存在しない場合は true
+     */
+    isValid: boolean;
+};
+/**
  * setValue で設定できる値型
  * - number は String に変換して設定する
  * - null/undefined は空文字として扱う
@@ -254,6 +283,10 @@ type AttachOptions = {
      * - 表示値と内部値の分離設定
      */
     separateValue?: SeparateValueOptions;
+    /**
+     * - 評価完了時の通知（input/commitごと）
+     */
+    onValidate?: (result: ValidateResult) => void;
 };
 /**
  * revert要求（入力を巻き戻す指示）
