@@ -140,7 +140,7 @@ test("length - validate: mode=error かつ max 超過ならエラー", () => {
 	assert.equal(errs[0].code, "length.max_overflow");
 	assert.equal(errs[0].rule, "length");
 	assert.equal(errs[0].phase, "validate");
-	assert.deepEqual(errs[0].detail, { max: 3, actual: 4 });
+	assert.deepEqual(errs[0].detail, { limit: 3, actual: 4 });
 });
 
 test("length - validate: mode が error 以外なら何もしない", () => {
@@ -184,5 +184,5 @@ test("length - fromDataset: オプションが正しく反映される", () => {
 
 	const errs = ctx._getErrors();
 	assert.equal(errs.length, 1);
-	assert.deepEqual(errs[0].detail, { max: 3, actual: 4 });
+	assert.deepEqual(errs[0].detail, { limit: 3, actual: 4 });
 });

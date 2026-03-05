@@ -61,7 +61,7 @@ export function width(options = {}) {
 		validate(value, ctx) {
 			// error 以外は何もしない
 			if (opt.mode !== "error") {
-				return value;
+				return;
 			}
 			// max 未指定なら制限なし
 			if (typeof opt.max !== "number") {
@@ -84,7 +84,7 @@ export function width(options = {}) {
 					code: "width.max_overflow",
 					rule: "width",
 					phase: "validate",
-					detail: { max: opt.max, actual: len }
+					detail: { limit: opt.max, actual: len }
 				});
 			}
 		}

@@ -162,7 +162,7 @@ export function length(options = {}) {
 		validate(value, ctx) {
 			// error 以外は何もしない
 			if (opt.mode !== "error") {
-				return value;
+				return;
 			}
 			// max 未指定なら制限なし
 			if (typeof opt.max !== "number") {
@@ -175,7 +175,7 @@ export function length(options = {}) {
 					code: "length.max_overflow",
 					rule: "length",
 					phase: "validate",
-					detail: { max: opt.max, actual: len }
+					detail: { limit: opt.max, actual: len }
 				});
 			}
 		}
