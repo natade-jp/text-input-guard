@@ -31,6 +31,26 @@ import { SwapState } from "./swap-state.js";
  */
 
 /**
+ * バリデーションがどの評価タイミングから呼び出されたかを表す識別子
+ *
+ * - "input"  : 入力中の評価（inputイベントなど）
+ * - "commit" : 確定時の評価（blurなど）
+ *
+ * @typedef {"input"|"commit"} ValidateSource
+ */
+
+/**
+ * バリデーション結果を表すオブジェクト
+ * - 各ルールの評価が完了したタイミングでコールバックに渡される
+ *
+ * @typedef {Object} ValidateResult
+ * @property {Guard} guard - この結果を発生させた Guard インスタンス
+ * @property {ValidateSource} source - 評価が実行されたタイミング（input / commit）
+ * @property {TigError[]} errors - 発生したエラー一覧
+ * @property {boolean} isValid - エラーが存在しない場合は true
+ */
+
+/**
  * setValue で設定できる値型
  * - number は String に変換して設定する
  * - null/undefined は空文字として扱う
@@ -122,6 +142,7 @@ import { SwapState } from "./swap-state.js";
  * @property {boolean} [warn] - 非対応ルールなどを console.warn するか
  * @property {string} [invalidClass] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
+ * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
  */
 
 /**
@@ -176,7 +197,7 @@ function warnLog(msg, warn) {
 export function attach(element, options = {}) {
 	const guard = new InputGuard(element, options);
 	guard.init();
-	return guard.toGuard();
+	return guard.getGuard();
 }
 
 /**
@@ -257,6 +278,12 @@ class InputGuard {
 		this.rules = Array.isArray(options.rules) ? options.rules : [];
 
 		/**
+		 * attach時に登録されたバリデーション結果コールバック
+		 * @type {(result: ValidateResult) => void | undefined}
+		 */
+		this.onValidate = options.onValidate;
+
+		/**
 		 * 実際に送信を担う要素（swap時は hidden(raw) 側）
 		 * swapしない場合は originalElement と同一
 		 * @type {HTMLElement}
@@ -290,6 +317,12 @@ class InputGuard {
 		 * @type {TigError[]}
 		 */
 		this.errors = [];
+
+		/**
+		 * attach の返却値
+		 * @type {Guard|null}
+		 */
+		this._guard = null;
 
 		// --------------------------------------------------
 		// pipeline（フェーズごとのルール配列）
@@ -763,6 +796,31 @@ class InputGuard {
 	}
 
 	/**
+	 * バリデーション結果をコールバックへ通知する
+	 *
+	 * - attach() の options.onValidate が指定されている場合のみ呼び出す
+	 * - evaluateInput / evaluateCommit の評価完了時に実行される
+	 * - エラーが存在しない場合でも呼び出される
+	 *
+	 * @param {ValidateSource} source - 評価が実行されたタイミング（"input" | "commit"）
+	 * @returns {void}
+	 */
+	notifyValidate(source) {
+		if (!this.onValidate) {
+			return;
+		}
+
+		const errors = this.getErrors();
+
+		this.onValidate({
+			guard: this.getGuard(),
+			source,
+			errors,
+			isValid: errors.length === 0
+		});
+	}
+
+	/**
 	 * normalize.char フェーズを実行する（文字の正規化）
 	 * @param {string} value
  	 * @param {GuardContext} ctx
@@ -1131,6 +1189,9 @@ class InputGuard {
 		// 受理値は常にrawとして保存（revert先・getRawValueの一貫性）
 		this.lastAcceptedValue = raw;
 		this.lastAcceptedSelection = this.readSelection(display);
+
+		// コールバック関数処理
+		this.notifyValidate("input");
 	}
 
 	/**
@@ -1195,6 +1256,9 @@ class InputGuard {
 		// 8) 受理値は raw を保持（revertやgetRawValueが安定する）
 		this.lastAcceptedValue = raw;
 		this.lastAcceptedSelection = this.readSelection(display);
+
+		// コールバック関数処理
+		this.notifyValidate("commit");
 	}
 
 	/**
@@ -1270,8 +1334,13 @@ class InputGuard {
 	 * - InputGuard 自体を公開せず、最小の操作だけを渡す
 	 * @returns {Guard}
 	 */
-	toGuard() {
-		return {
+	getGuard() {
+		if (this._guard) {
+			return this._guard;
+		}
+
+		// ここで “this” を閉じ込めた関数群を一度だけ作る
+		this._guard = {
 			detach: () => this.detach(),
 			isValid: () => this.isValid(),
 			getErrors: () => this.getErrors(),
@@ -1283,5 +1352,7 @@ class InputGuard {
 			commit: () => this.evaluateCommit(),
 			setValue: (value, mode) => this.setValue(value, mode)
 		};
+
+		return this._guard;
 	}
 }
