@@ -7,7 +7,7 @@
 	</head>
 	<body>
 		<label>
-			<input id="memberCode" type="text" />
+			<input id="memberCode" type="text" inputmode="url" />
 		</label>
 
 		<div id="output" class="kv"></div>
@@ -30,7 +30,7 @@
 					}),
 					rules.length({
 						max: 5,
-						overflowInput: "block",
+						mode: "block",
 						unit: "grapheme"
 					}),
 					rules.trim()

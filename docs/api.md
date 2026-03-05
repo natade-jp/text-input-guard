@@ -396,18 +396,18 @@ rules.trim();
 ```js
 rules.length({
 	max: 10,
-	overflowInput: "block",
+	mode: "block",
 	unit: "grapheme"
 });
 ```
 
 **オプション**
 
-| option          | type                                 | default      | 説明                                                                                      |
-| --------------- | ------------------------------------ | ------------ | ----------------------------------------------------------------------------------------- |
-| `max`           | `number`                             | -            | 最大長。未指定なら制限なし                                                                |
-| `overflowInput` | `"block" \| "error"`                 | `"block"`    | 最大長を超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
-| `unit`          | `"grapheme" \| "utf-16" \| "utf-32"` | `"grapheme"` | 長さの単位                                                                                |
+| option | type                                 | default      | 説明                                                                                      |
+| ------ | ------------------------------------ | ------------ | ----------------------------------------------------------------------------------------- |
+| `max`  | `number`                             | -            | 最大長。未指定なら制限なし                                                                |
+| `mode` | `"block" \| "error"`                 | `"block"`    | 最大長を超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
+| `unit` | `"grapheme" \| "utf-16" \| "utf-32"` | `"grapheme"` | 長さの単位                                                                                |
 
 **補足**
 
@@ -431,16 +431,16 @@ rules.length({
 ```js
 rules.width({
 	max: 20,
-	overflowInput: "block"
+	mode: "block"
 });
 ```
 
 **オプション**
 
-| option          | type                 | default   | 説明                                                                                      |
-| --------------- | -------------------- | --------- | ----------------------------------------------------------------------------------------- |
-| `max`           | `number`             | -         | 最大幅（半角=1、全角=2）。未指定なら制限なし                                              |
-| `overflowInput` | `"block" \| "error"` | `"block"` | 最大幅を超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
+| option | type                 | default   | 説明                                                                                      |
+| ------ | -------------------- | --------- | ----------------------------------------------------------------------------------------- |
+| `max`  | `number`             | -         | 最大幅（半角=1、全角=2）。未指定なら制限なし                                              |
+| `mode` | `"block" \| "error"` | `"block"` | 最大幅を超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
 
 **補足**
 
@@ -467,18 +467,18 @@ rules.width({
 ```js
 rules.bytes({
 	max: 64,
-	overflowInput: "block",
+	mode: "block",
 	unit: "utf-8"
 });
 ```
 
 **オプション**
 
-| option          | type                                                   | default   | 説明                                                                                          |
-| --------------- | ------------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------- |
-| `max`           | `number`                                               | -         | 最大サイズ（バイト数）。未指定なら制限なし                                                    |
-| `overflowInput` | `"block" \| "error"`                                   | `"block"` | 最大サイズを超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
-| `unit`          | `"utf-8" \| "utf-16" \| "utf-32" \| "sjis" \| "cp932"` | `"utf-8"` | サイズの単位（バイト数の数え方）                                                              |
+| option | type                                                   | default   | 説明                                                                                          |
+| ------ | ------------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------- |
+| `max`  | `number`                                               | -         | 最大サイズ（バイト数）。未指定なら制限なし                                                    |
+| `mode` | `"block" \| "error"`                                   | `"block"` | 最大サイズを超えたときの挙動（`block`: 超過分を入力時にカット / `error`: 変更せずエラー扱い） |
+| `unit` | `"utf-8" \| "utf-16" \| "utf-32" \| "sjis" \| "cp932"` | `"utf-8"` | サイズの単位（バイト数の数え方）                                                              |
 
 **補足**
 
@@ -540,8 +540,8 @@ rules.numeric({
 rules.digits({
 	int: 8,
 	frac: 2,
-	overflowInputInt: "block",
-	overflowInputFrac: "block",
+	modeInt: "block",
+	modeFrac: "block",
 	fixFracOnBlur: "round",
 	forceFracOnBlur: true
 });
@@ -549,16 +549,16 @@ rules.digits({
 
 **オプション**
 
-| option              | type                                                     | default  | 説明                                             |
-| ------------------- | -------------------------------------------------------- | -------- | ------------------------------------------------ |
-| `int`               | `number`                                                 | -        | 整数部の最大桁数（省略可）                       |
-| `frac`              | `number`                                                 | -        | 小数部の最大桁数（省略可）                       |
-| `countLeadingZeros` | `boolean`                                                | `false`  | 整数部の先頭ゼロを桁数に含める                   |
-| `overflowInputInt`  | `"block" \| "none"`                                      | `"none"` | 入力中：整数部が最大桁を超える入力をブロックする |
-| `overflowInputFrac` | `"block" \| "none"`                                      | `"none"` | 入力中：小数部が最大桁を超える入力をブロックする |
-| `fixIntOnBlur`      | `"none" \| "truncateLeft" \| "truncateRight" \| "clamp"` | `"none"` | blur時の整数部補正                               |
-| `fixFracOnBlur`     | `"none" \| "truncate" \| "round"`                        | `"none"` | blur時の小数部補正                               |
-| `forceFracOnBlur`   | `boolean`                                                | `false`  | blur時に小数部を必ず表示（`frac` 桁まで0埋め）   |
+| option              | type                                                     | default   | 説明                                           |
+| ------------------- | -------------------------------------------------------- | --------- | ---------------------------------------------- |
+| `int`               | `number`                                                 | -         | 整数部の最大桁数（省略可）                     |
+| `frac`              | `number`                                                 | -         | 小数部の最大桁数（省略可）                     |
+| `countLeadingZeros` | `boolean`                                                | `false`   | 整数部の先頭ゼロを桁数に含める                 |
+| `modeInt`           | `"block" \| "error"`                                     | `"block"` | 入力中：整数部が最大桁を超える入力の挙動       |
+| `modeFrac`          | `"block" \| "error"`                                     | `"block"` | 入力中：小数部が最大桁を超える入力の挙動       |
+| `fixIntOnBlur`      | `"none" \| "truncateLeft" \| "truncateRight" \| "clamp"` | `"none"`  | blur時の整数部補正                             |
+| `fixFracOnBlur`     | `"none" \| "truncate" \| "round"`                        | `"none"`  | blur時の小数部補正                             |
+| `forceFracOnBlur`   | `boolean`                                                | `false`   | blur時に小数部を必ず表示（`frac` 桁まで0埋め） |
 
 **補足**
 

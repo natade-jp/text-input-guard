@@ -22,8 +22,8 @@ const makeCtx = function ({
 	return ctx;
 };
 
-test("length - normalizeChar: overflowInput が block 以外なら何もしない", () => {
-	const rule = length({ max: 3, overflowInput: "error" });
+test("length - normalizeChar: mode が block 以外なら何もしない", () => {
+	const rule = length({ max: 3, mode: "error" });
 
 	const ctx = makeCtx({
 		beforeText: "abc",
@@ -36,7 +36,7 @@ test("length - normalizeChar: overflowInput が block 以外なら何もしな�
 });
 
 test("length - normalizeChar: max 未指定なら制限なし", () => {
-	const rule = length({ overflowInput: "block" });
+	const rule = length({ mode: "block" });
 
 	const ctx = makeCtx({
 		beforeText: "abc",
@@ -49,7 +49,7 @@ test("length - normalizeChar: max 未指定なら制限なし", () => {
 });
 
 test("length - normalizeChar: insertedText が空文字なら何もしない", () => {
-	const rule = length({ max: 3, overflowInput: "block" });
+	const rule = length({ max: 3, mode: "block" });
 
 	const ctx = makeCtx({
 		beforeText: "abc",
@@ -62,7 +62,7 @@ test("length - normalizeChar: insertedText が空文字なら何もしない", (
 });
 
 test("length - normalizeChar: grapheme 単位で超過分がカットされる", () => {
-	const rule = length({ max: 3, overflowInput: "block", unit: "grapheme" });
+	const rule = length({ max: 3, mode: "block", unit: "grapheme" });
 
 	// すでに3文字あるので追加はすべてカット
 	const ctx = makeCtx({
@@ -76,7 +76,7 @@ test("length - normalizeChar: grapheme 単位で超過分がカットされる",
 });
 
 test("length - normalizeChar: 途中までなら追加できる", () => {
-	const rule = length({ max: 5, overflowInput: "block", unit: "grapheme" });
+	const rule = length({ max: 5, mode: "block", unit: "grapheme" });
 
 	const ctx = makeCtx({
 		beforeText: "abc",
@@ -93,7 +93,7 @@ test("length - normalizeChar: utf-16 単位ではサロゲートペアは 2 と�
 
 	// max=1 なら追加不可
 	{
-		const rule = length({ max: 1, overflowInput: "block", unit: "utf-16" });
+		const rule = length({ max: 1, mode: "block", unit: "utf-16" });
 		const ctx = makeCtx({
 			beforeText: "",
 			insertedText: smile
@@ -104,7 +104,7 @@ test("length - normalizeChar: utf-16 単位ではサロゲートペアは 2 と�
 
 	// max=2 なら追加可能
 	{
-		const rule = length({ max: 2, overflowInput: "block", unit: "utf-16" });
+		const rule = length({ max: 2, mode: "block", unit: "utf-16" });
 		const ctx = makeCtx({
 			beforeText: "",
 			insertedText: smile
@@ -117,7 +117,7 @@ test("length - normalizeChar: utf-16 単位ではサロゲートペアは 2 と�
 test("length - normalizeChar: utf-32 単位では結合文字は 2 と数える", () => {
 	const combined = "e\u0301"; // e + combining acute
 
-	const rule = length({ max: 1, overflowInput: "block", unit: "utf-32" });
+	const rule = length({ max: 1, mode: "block", unit: "utf-32" });
 
 	const ctx = makeCtx({
 		beforeText: "",
@@ -129,8 +129,8 @@ test("length - normalizeChar: utf-32 単位では結合文字は 2 と数える"
 	assert.equal(out, "");
 });
 
-test("length - validate: overflowInput=error かつ max 超過ならエラー", () => {
-	const rule = length({ max: 3, overflowInput: "error", unit: "grapheme" });
+test("length - validate: mode=error かつ max 超過ならエラー", () => {
+	const rule = length({ max: 3, mode: "error", unit: "grapheme" });
 
 	const ctx = makeCtx();
 	rule.validate("abcd", ctx);
@@ -143,8 +143,8 @@ test("length - validate: overflowInput=error かつ max 超過ならエラー", 
 	assert.deepEqual(errs[0].detail, { max: 3, actual: 4 });
 });
 
-test("length - validate: overflowInput が error 以外なら何もしない", () => {
-	const rule = length({ max: 3, overflowInput: "block", unit: "grapheme" });
+test("length - validate: mode が error 以外なら何もしない", () => {
+	const rule = length({ max: 3, mode: "block", unit: "grapheme" });
 
 	const ctx = makeCtx();
 	rule.validate("abcd", ctx);
@@ -153,7 +153,7 @@ test("length - validate: overflowInput が error 以外なら何もしない", (
 });
 
 test("length - validate: max 未指定なら制限なし", () => {
-	const rule = length({ overflowInput: "error" });
+	const rule = length({ mode: "error" });
 
 	const ctx = makeCtx();
 	rule.validate("abcd", ctx);
@@ -170,7 +170,7 @@ test("length - fromDataset: オプションが正しく反映される", () => {
 	const dataset = {
 		tigRulesLength: "1",
 		tigRulesLengthMax: "3",
-		tigRulesLengthOverflowInput: "error",
+		tigRulesLengthMode: "error",
 		tigRulesLengthUnit: "utf-16"
 	};
 

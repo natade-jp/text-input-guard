@@ -57,6 +57,10 @@ npm i text-input-guard
   style="width: 100%; border-style: none;"
 ></iframe>
 
+```html
+<input id="memberCode" type="text" inputmode="url" />
+```
+
 ```js
 import { attach, rules } from "text-input-guard";
 
@@ -73,7 +77,7 @@ const guard = attach(input, {
 		}),
 		rules.length({
 			max: 5,
-			overflowInput: "block",
+			mode: "block",
 			unit: "grapheme"
 		}),
 		rules.trim()
@@ -89,6 +93,10 @@ const guard = attach(input, {
   :src="withBase('/demo/index-number.html')"
   style="width: 100%; border-style: none;"
 ></iframe>
+
+```html
+<input id="price" type="text" inputmode="decimal" style="text-align: right" />
+```
 
 ```js
 import { attach, rules } from "text-input-guard";
@@ -106,8 +114,8 @@ const guard = attach(input, {
 		rules.digits({
 			int: 8,
 			frac: 2,
-			overflowInputInt: "block",
-			overflowInputFrac: "block",
+			modeInt: "block",
+			modeFrac: "block",
 			fixFracOnBlur: "round",
 			forceFracOnBlur: true
 		}),

@@ -23,12 +23,12 @@
 				rules: [
 					rules.length({
 						max: 5,
-						overflowInput: "error",
+						mode: "error",
 						unit: "grapheme"
 					}),
 					rules.bytes({
 						max: 50,
-						overflowInput: "error",
+						mode: "error",
 						unit: "utf-8"
 					})
 				]

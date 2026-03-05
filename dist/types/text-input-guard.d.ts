@@ -347,8 +347,8 @@ declare namespace digits {
      * - data-tig-rules-digits-count-leading-zeros      -> dataset.tigRulesDigitsCountLeadingZeros
      * - data-tig-rules-digits-fix-int-on-blur          -> dataset.tigRulesDigitsFixIntOnBlur
      * - data-tig-rules-digits-fix-frac-on-blur         -> dataset.tigRulesDigitsFixFracOnBlur
-     * - data-tig-rules-digits-overflow-input-int       -> dataset.tigRulesDigitsOverflowInputInt
-     * - data-tig-rules-digits-overflow-input-frac      -> dataset.tigRulesDigitsOverflowInputFrac
+     * - data-tig-rules-digits-mode-int                 -> dataset.tigRulesDigitsModeInt
+     * - data-tig-rules-digits-mode-frac                -> dataset.tigRulesDigitsModeFrac
      * - data-tig-rules-digits-force-frac-on-blur       -> dataset.tigRulesDigitsForceFracOnBlur
      *
      * @param {DOMStringMap} dataset
@@ -382,13 +382,13 @@ type DigitsRuleOptions = {
      */
     fixFracOnBlur?: "none" | "truncate" | "round";
     /**
-     * - 入力中：整数部が最大桁を超える入力をブロックする
+     * - 整数部が最大桁を超える入力の挙動
      */
-    overflowInputInt?: "none" | "block";
+    modeInt?: "block" | "error";
     /**
-     * - 入力中：小数部が最大桁を超える入力をブロックする
+     * - 小数部が最大桁を超える入力の挙動
      */
-    overflowInputFrac?: "none" | "block";
+    modeFrac?: "block" | "error";
     /**
      * - blur時に小数部を必ず表示（frac桁まで0埋め）
      */
@@ -508,9 +508,6 @@ type AsciiRuleOptions = {
 
 /**
  * filter ルールを生成する
- * - mode="drop": 不要文字を落とすだけ
- * - mode="error": 文字は落とさず validate でエラーを積む
- *
  * @param {FilterRuleOptions} [options]
  * @returns {import("../text-input-guard.js").Rule}
  */
@@ -522,7 +519,7 @@ declare namespace filter {
      *
      * 対応する data 属性（dataset 名）
      * - data-tig-rules-filter               -> dataset.tigRulesFilter
-     * - data-tig-rules-filter-mode          -> dataset.tigRulesFilterMode ("drop"|"error")
+     * - data-tig-rules-filter-mode          -> dataset.tigRulesFilterMode
      * - data-tig-rules-filter-category      -> dataset.tigRulesFilterCategory ("a,b,c")
      * - data-tig-rules-filter-allow         -> dataset.tigRulesFilterAllow
      * - data-tig-rules-filter-allow-flags   -> dataset.tigRulesFilterAllowFlags
@@ -536,26 +533,6 @@ declare namespace filter {
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
 /**
- * filter ルールのカテゴリ名
- *
- * - "digits"         : ASCII 数字 (0-9)
- * - "alpha-upper"    : ASCII 英字大文字 (A-Z)
- * - "alpha-lower"    : ASCII 英字小文字 (a-z)
- * - "ascii"          : ASCII 可視文字 + スペース含む (U+0020–U+007E)
- * - "hiragana"       : ひらがな (U+3040–U+309F)
- * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
- * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
- * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、サロゲートペア、補助平面禁止）
- * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
- * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
- * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
- */
-type FilterCategory = "digits" | "alpha-upper" | "alpha-lower" | "ascii" | "hiragana" | "katakana-full" | "katakana-half" | "bmp-only" | "sjis-only" | "cp932-only" | "single-codepoint-only";
-/**
- * filter ルールの動作モード
- */
-type FilterMode = "drop" | "error";
-/**
  * filter ルールのオプション
  * - category は和集合で扱う（複数指定OK）
  * - allow は追加許可（和集合）
@@ -565,9 +542,9 @@ type FilterMode = "drop" | "error";
  */
 type FilterRuleOptions = {
     /**
-     * - drop: 不要文字を削除 / error: 削除せずエラーを積む
+     * - 不要文字を入力中した場合の挙動
      */
-    mode?: FilterMode;
+    mode?: "block" | "error";
     /**
      * - カテゴリ（配列）
      */
@@ -589,6 +566,22 @@ type FilterRuleOptions = {
      */
     denyFlags?: string;
 };
+/**
+ * filter ルールのカテゴリ名
+ *
+ * - "digits"         : ASCII 数字 (0-9)
+ * - "alpha-upper"    : ASCII 英字大文字 (A-Z)
+ * - "alpha-lower"    : ASCII 英字小文字 (a-z)
+ * - "ascii"          : ASCII 可視文字 + スペース含む (U+0020–U+007E)
+ * - "hiragana"       : ひらがな (U+3040–U+309F)
+ * - "katakana-full"  : 全角カタカナ (U+30A0–U+30FF)
+ * - "katakana-half"  : 半角カタカナ (U+FF65–U+FF9F)
+ * - "bmp-only"       : BMP のみ許可（U+0000–U+FFFF、サロゲートペア、補助平面禁止）
+ * - "sjis-only"      : 正規 Shift_JIS（JIS X 0208 + 1バイト領域）のみ許可
+ * - "cp932-only"     : Windows-31J (CP932) でエンコード可能な文字のみ許可
+ * - "single-codepoint-only" : 単一コードポイントのみ許可（結合文字や異体字セレクタを含まない）
+ */
+type FilterCategory = "digits" | "alpha-upper" | "alpha-lower" | "ascii" | "hiragana" | "katakana-full" | "katakana-half" | "bmp-only" | "sjis-only" | "cp932-only" | "single-codepoint-only";
 
 /**
  * length ルールを生成する
@@ -605,7 +598,7 @@ declare namespace length {
      * 対応する data 属性（dataset 名）
      * - data-tig-rules-length                     -> dataset.tigRulesLength
      * - data-tig-rules-length-max                 -> dataset.tigRulesLengthMax
-     * - data-tig-rules-length-overflow-input      -> dataset.tigRulesLengthOverflowInput
+     * - data-tig-rules-length-mode                -> dataset.tigRulesLengthMode
      * - data-tig-rules-length-unit                -> dataset.tigRulesLengthUnit
      *
      * @param {DOMStringMap} dataset
@@ -625,12 +618,9 @@ type LengthRuleOptions = {
     /**
      * - 入力中に最大長を超えたときの挙動
      */
-    overflowInput?: "block" | "error";
+    mode?: "block" | "error";
     /**
      * - 長さの単位
-     *
-     * block   : 最大長を超える部分を切る
-     * error   : エラーを積むだけ（値は変更しない）
      */
     unit?: "grapheme" | "utf-16" | "utf-32";
 };
@@ -639,10 +629,7 @@ type LengthRuleOptions = {
  * width ルールのオプション
  * @typedef {Object} WidthRuleOptions
  * @property {number} [max] - 最大長（全角は2, 半角は1）
- * @property {"block"|"error"} [overflowInput="block"] - 入力中に最大長を超えたときの挙動
- *
- * block   : 最大長を超える部分を切る
- * error   : エラーを積むだけ（値は変更しない）
+ * @property {"block"|"error"} [mode="block"] - 入力中に最大長を超えたときの挙動
  */
 /**
  * width ルールを生成する
@@ -659,7 +646,7 @@ declare namespace width {
      * 対応する data 属性（dataset 名）
      * - data-tig-rules-length                     -> dataset.tigRulesWidth
      * - data-tig-rules-length-max                 -> dataset.tigRulesWidthMax
-     * - data-tig-rules-length-overflow-input      -> dataset.tigRulesWidthOverflowInput
+     * - data-tig-rules-length-mode                -> dataset.tigRulesWidthMode
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -677,11 +664,8 @@ type WidthRuleOptions = {
     max?: number;
     /**
      * - 入力中に最大長を超えたときの挙動
-     *
-     * block   : 最大長を超える部分を切る
-     * error   : エラーを積むだけ（値は変更しない）
      */
-    overflowInput?: "block" | "error";
+    mode?: "block" | "error";
 };
 
 /**
@@ -699,7 +683,7 @@ declare namespace bytes {
      * 対応する data 属性（dataset 名）
      * - data-tig-rules-bytes                     -> dataset.tigRulesBytes
      * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
-     * - data-tig-rules-bytes-overflow-input      -> dataset.tigRulesBytesOverflowInput
+     * - data-tig-rules-bytes-mode                -> dataset.tigRulesBytesMode
      * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
      *
      * @param {DOMStringMap} dataset
@@ -719,12 +703,9 @@ type BytesRuleOptions = {
     /**
      * - 入力中に最大長を超えたときの挙動
      */
-    overflowInput?: "block" | "error";
+    mode?: "block" | "error";
     /**
      * - サイズの単位(sjis系を使用する場合はfilterも必須)
-     *
-     * block   : 最大長を超える部分を切る
-     * error   : エラーを積むだけ（値は変更しない）
      */
     unit?: "utf-8" | "utf-16" | "utf-32" | "sjis" | "cp932";
 };

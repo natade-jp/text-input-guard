@@ -18,8 +18,8 @@ import { parseDatasetBool, parseDatasetNumber, parseDatasetEnum } from "./_datas
  * @property {boolean} [countLeadingZeros=true] - 整数部の先頭ゼロを桁数に含める
  * @property {"none"|"truncateLeft"|"truncateRight"|"clamp"} [fixIntOnBlur="none"] - blur時の整数部補正
  * @property {"none"|"truncate"|"round"} [fixFracOnBlur="none"] - blur時の小数部補正
- * @property {"none"|"block"} [overflowInputInt="none"] - 入力中：整数部が最大桁を超える入力をブロックする
- * @property {"none"|"block"} [overflowInputFrac="none"] - 入力中：小数部が最大桁を超える入力をブロックする
+ * @property {"block"|"error"} [modeInt="block"] - 整数部が最大桁を超える入力の挙動
+ * @property {"block"|"error"} [modeFrac="block"] - 小数部が最大桁を超える入力の挙動
  * @property {boolean} [forceFracOnBlur=false] - blur時に小数部を必ず表示（frac桁まで0埋め）
  */
 
@@ -161,8 +161,8 @@ export function digits(options = {}) {
 		countLeadingZeros: options.countLeadingZeros ?? true,
 		fixIntOnBlur: options.fixIntOnBlur ?? "none",
 		fixFracOnBlur: options.fixFracOnBlur ?? "none",
-		overflowInputInt: options.overflowInputInt ?? "none",
-		overflowInputFrac: options.overflowInputFrac ?? "none",
+		modeInt: options.modeInt ?? "block",
+		modeFrac: options.modeFrac ?? "block",
 		forceFracOnBlur: options.forceFracOnBlur ?? false
 	};
 
@@ -189,7 +189,7 @@ export function digits(options = {}) {
 				const intDigits = countIntDigits(intPart, opt.countLeadingZeros);
 				if (intDigits > opt.int) {
 					// 入力ブロック（int）
-					if (opt.overflowInputInt === "block") {
+					if (opt.modeInt === "block") {
 						ctx.requestRevert({
 							reason: "digits.int_overflow",
 							detail: { limit: opt.int, actual: intDigits }
@@ -212,7 +212,7 @@ export function digits(options = {}) {
 				const fracDigits = (fracPart ?? "").length;
 				if (fracDigits > opt.frac) {
 					// 入力ブロック（frac）
-					if (opt.overflowInputFrac === "block") {
+					if (opt.modeFrac === "block") {
 						ctx.requestRevert({
 							reason: "digits.frac_overflow",
 							detail: { limit: opt.frac, actual: fracDigits }
@@ -329,8 +329,8 @@ export function digits(options = {}) {
  * - data-tig-rules-digits-count-leading-zeros      -> dataset.tigRulesDigitsCountLeadingZeros
  * - data-tig-rules-digits-fix-int-on-blur          -> dataset.tigRulesDigitsFixIntOnBlur
  * - data-tig-rules-digits-fix-frac-on-blur         -> dataset.tigRulesDigitsFixFracOnBlur
- * - data-tig-rules-digits-overflow-input-int       -> dataset.tigRulesDigitsOverflowInputInt
- * - data-tig-rules-digits-overflow-input-frac      -> dataset.tigRulesDigitsOverflowInputFrac
+ * - data-tig-rules-digits-mode-int                 -> dataset.tigRulesDigitsModeInt
+ * - data-tig-rules-digits-mode-frac                -> dataset.tigRulesDigitsModeFrac
  * - data-tig-rules-digits-force-frac-on-blur       -> dataset.tigRulesDigitsForceFracOnBlur
  *
  * @param {DOMStringMap} dataset
@@ -383,15 +383,15 @@ digits.fromDataset = function fromDataset(dataset, _el) {
 		options.fixFracOnBlur = fixFrac;
 	}
 
-	// overflowInputInt / overflowInputFrac
-	const ovInt = parseDatasetEnum(dataset.tigRulesDigitsOverflowInputInt, ["none", "block"]);
-	if (ovInt != null) {
-		options.overflowInputInt = ovInt;
+	// modeInt / modeFrac
+	const modeInt = parseDatasetEnum(dataset.tigRulesDigitsModeInt, ["block", "error"]);
+	if (modeInt != null) {
+		options.modeInt = modeInt;
 	}
 
-	const ovFrac = parseDatasetEnum(dataset.tigRulesDigitsOverflowInputFrac, ["none", "block"]);
-	if (ovFrac != null) {
-		options.overflowInputFrac = ovFrac;
+	const modeFrac = parseDatasetEnum(dataset.tigRulesDigitsModeFrac, ["block", "error"]);
+	if (modeFrac != null) {
+		options.modeFrac = modeFrac;
 	}
 
 	// forceFracOnBlur

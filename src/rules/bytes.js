@@ -15,11 +15,8 @@ import { parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
  * bytes ルールのオプション
  * @typedef {Object} BytesRuleOptions
  * @property {number} [max] - 最大長（グラフェム数）。未指定なら制限なし
- * @property {"block"|"error"} [overflowInput="block"] - 入力中に最大長を超えたときの挙動
+ * @property {"block"|"error"} [mode="block"] - 入力中に最大長を超えたときの挙動
  * @property {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} [unit="utf-8"] - サイズの単位(sjis系を使用する場合はfilterも必須)
- *
- * block   : 最大長を超える部分を切る
- * error   : エラーを積むだけ（値は変更しない）
  */
 
 /**
@@ -144,7 +141,7 @@ export function bytes(options = {}) {
 	/** @type {BytesRuleOptions} */
 	const opt = {
 		max: typeof options.max === "number" ? options.max : undefined,
-		overflowInput: options.overflowInput ?? "block",
+		mode: options.mode ?? "block",
 		unit: options.unit ?? "utf-8"
 	};
 
@@ -154,7 +151,7 @@ export function bytes(options = {}) {
 
 		normalizeChar(value, ctx) {
 			// block 以外は何もしない
-			if (opt.overflowInput !== "block") {
+			if (opt.mode !== "block") {
 				return value;
 			}
 			// max 未指定なら制限なし
@@ -168,7 +165,7 @@ export function bytes(options = {}) {
 
 		validate(value, ctx) {
 			// error 以外は何もしない
-			if (opt.overflowInput !== "error") {
+			if (opt.mode !== "error") {
 				return value;
 			}
 			// max 未指定なら制限なし
@@ -197,7 +194,7 @@ export function bytes(options = {}) {
  * 対応する data 属性（dataset 名）
  * - data-tig-rules-bytes                     -> dataset.tigRulesBytes
  * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
- * - data-tig-rules-bytes-overflow-input      -> dataset.tigRulesBytesOverflowInput
+ * - data-tig-rules-bytes-mode                -> dataset.tigRulesBytesMode
  * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
  *
  * @param {DOMStringMap} dataset
@@ -218,12 +215,9 @@ bytes.fromDataset = function fromDataset(dataset, _el) {
 		options.max = max;
 	}
 
-	const overflowInput = parseDatasetEnum(
-		dataset.tigRulesBytesOverflowInput,
-		["block", "error"]
-	);
-	if (overflowInput != null) {
-		options.overflowInput = overflowInput;
+	const mode = parseDatasetEnum(dataset.tigRulesBytesMode, ["block", "error"]);
+	if (mode != null) {
+		options.mode = mode;
 	}
 
 	const unit = parseDatasetEnum(

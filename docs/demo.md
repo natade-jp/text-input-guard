@@ -52,6 +52,7 @@ const guard = attach(input, {
 - アルファベットの大文字と数値を許可
 - 記号は正規表現で `-_@` のみ許可
 - 前後のスペースを除去
+- IMEの初期値はOFF（`inputmode="url"`）
 
 <iframe
   :src="withBase('/demo/text-test2.html')"
@@ -59,7 +60,7 @@ const guard = attach(input, {
 ></iframe>
 
 ```html
-<input id="code" type="text" />
+<input id="code" type="text" inputmode="url" />
 ```
 
 ```js
@@ -108,7 +109,7 @@ const guard = attach(input, {
 		}),
 		rules.bytes({
 			max: 10,
-			overflowInput: "block",
+			mode: "block",
 			unit: "cp932"
 		})
 	]
@@ -149,7 +150,7 @@ const guard = attach(input, {
 		}),
 		rules.length({
 			max: 10,
-			overflowInput: "block",
+			mode: "block",
 			unit: "utf-16"
 		})
 	]
@@ -179,12 +180,12 @@ const guard = attach(input, {
 	rules: [
 		rules.length({
 			max: 5,
-			overflowInput: "error",
+			mode: "error",
 			unit: "grapheme"
 		}),
 		rules.bytes({
 			max: 50,
-			overflowInput: "error",
+			mode: "error",
 			unit: "utf-8"
 		})
 	]
@@ -224,8 +225,8 @@ const guard = attach(input, {
 		rules.digits({
 			int: 8,
 			frac: 2,
-			overflowInputFrac: "none",
-			overflowInputInt: "none"
+			modeFrac: "error",
+			modeInt: "error"
 		}),
 		rules.prefix({
 			text: "¥"
@@ -270,8 +271,8 @@ const guard = attach(input, {
 		rules.digits({
 			int: 8,
 			frac: 4,
-			overflowInputInt: "block",
-			overflowInputFrac: "block"
+			modeInt: "block",
+			modeFrac: "block"
 		}),
 		rules.prefix({
 			text: "¥"
@@ -316,8 +317,8 @@ const guard = attach(input, {
 		rules.digits({
 			int: 8,
 			frac: 2,
-			overflowInputInt: "block",
-			overflowInputFrac: "block",
+			modeInt: "block",
+			modeFrac: "block",
 			forceFracOnBlur: true
 		}),
 		rules.comma()
@@ -374,8 +375,8 @@ const guard = guards.getGuards()[0];
 	data-tig-rules-digits
 	data-tig-rules-digits-int="6"
 	data-tig-rules-digits-frac="2"
-	data-tig-rules-digits-overflow-input-int="block"
-	data-tig-rules-digits-overflow-input-frac="block"
+	data-tig-rules-digits-mode-int="block"
+	data-tig-rules-digits-mode-frac="block"
 	data-tig-rules-digits-fix-frac-on-blur="round"
 	data-tig-rules-comma
 	data-tig-rules-digits-force-frac-on-blur="true"

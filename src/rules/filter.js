@@ -15,6 +15,23 @@ import CP932 from "./libs/encode/CP932.js";
 import { parseDatasetEnum, parseDatasetEnumList } from "./_dataset.js";
 
 /**
+ * filter ルールのオプション
+ * - category は和集合で扱う（複数指定OK）
+ * - allow は追加許可（和集合）
+ * - deny は除外（差集合）
+ *
+ * allowed = (category の和集合 ∪ allow) − deny
+ *
+ * @typedef {Object} FilterRuleOptions
+ * @property {"block"|"error"} [mode="block"] - 不要文字を入力中した場合の挙動
+ * @property {FilterCategory[]} [category] - カテゴリ（配列）
+ * @property {RegExp|string} [allow] - 追加で許可する正規表現（1文字にマッチさせる想定）
+ * @property {string} [allowFlags] - allow が文字列のときの flags（"iu" など。g/y は無視）
+ * @property {RegExp|string} [deny] - 除外する正規表現（1文字にマッチさせる想定）
+ * @property {string} [denyFlags] - deny が文字列のときの flags（"iu" など。g/y は無視）
+ */
+
+/**
  * filter ルールのカテゴリ名
  *
  * - "digits"         : ASCII 数字 (0-9)
@@ -51,28 +68,6 @@ const FILTER_CATEGORIES = [
 	"cp932-only",
 	"single-codepoint-only"
 ];
-
-/**
- * filter ルールの動作モード
- * @typedef {"drop"|"error"} FilterMode
- */
-
-/**
- * filter ルールのオプション
- * - category は和集合で扱う（複数指定OK）
- * - allow は追加許可（和集合）
- * - deny は除外（差集合）
- *
- * allowed = (category の和集合 ∪ allow) − deny
- *
- * @typedef {Object} FilterRuleOptions
- * @property {FilterMode} [mode="drop"] - drop: 不要文字を削除 / error: 削除せずエラーを積む
- * @property {FilterCategory[]} [category] - カテゴリ（配列）
- * @property {RegExp|string} [allow] - 追加で許可する正規表現（1文字にマッチさせる想定）
- * @property {string} [allowFlags] - allow が文字列のときの flags（"iu" など。g/y は無視）
- * @property {RegExp|string} [deny] - 除外する正規表現（1文字にマッチさせる想定）
- * @property {string} [denyFlags] - deny が文字列のときの flags（"iu" など。g/y は無視）
- */
 
 /**
  * /g や /y は lastIndex の罠があるので除去して使う
@@ -275,16 +270,13 @@ const scanByAllowed = function (value, isAllowed, maxInvalidChars = 20) {
 
 /**
  * filter ルールを生成する
- * - mode="drop": 不要文字を落とすだけ
- * - mode="error": 文字は落とさず validate でエラーを積む
- *
  * @param {FilterRuleOptions} [options]
  * @returns {import("../text-input-guard.js").Rule}
  */
 export function filter(options = {}) {
 	/** @type {FilterRuleOptions} */
 	const opt = {
-		mode: options.mode ?? "drop",
+		mode: options.mode ?? "block",
 		category: options.category ?? [],
 		allow: options.allow,
 		allowFlags: options.allowFlags,
@@ -369,7 +361,7 @@ export function filter(options = {}) {
  *
  * 対応する data 属性（dataset 名）
  * - data-tig-rules-filter               -> dataset.tigRulesFilter
- * - data-tig-rules-filter-mode          -> dataset.tigRulesFilterMode ("drop"|"error")
+ * - data-tig-rules-filter-mode          -> dataset.tigRulesFilterMode
  * - data-tig-rules-filter-category      -> dataset.tigRulesFilterCategory ("a,b,c")
  * - data-tig-rules-filter-allow         -> dataset.tigRulesFilterAllow
  * - data-tig-rules-filter-allow-flags   -> dataset.tigRulesFilterAllowFlags
@@ -388,7 +380,7 @@ filter.fromDataset = function fromDataset(dataset, _el) {
 	/** @type {FilterRuleOptions} */
 	const options = {};
 
-	const mode = parseDatasetEnum(dataset.tigRulesFilterMode, ["drop", "error"]);
+	const mode = parseDatasetEnum(dataset.tigRulesFilterMode, ["block", "error"]);
 	if (mode != null) {
 		options.mode = mode;
 	}

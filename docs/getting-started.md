@@ -59,8 +59,8 @@ attach(input, {
 		rules.digits({
 			int: 8,
 			frac: 2,
-			overflowInputInt: "block",
-			overflowInputFrac: "block"
+			modeInt: "block",
+			modeFrac: "block"
 		}),
 		rules.comma()
 	]
