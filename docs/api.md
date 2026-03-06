@@ -439,6 +439,7 @@ rules.imeOff();
 **補足**
 
 - 単なる「半角化」ではなく、日本語IME入力で入りやすい文字を ASCII 入力向けに矯正するルールです。
+- IMEのデフォルトをOFFにする `inputmode="url"` と併用することを推奨します。
 
 #### `ascii()`
 
@@ -657,6 +658,7 @@ rules.numeric({
 **補足**
 
 - `allowEmpty: false` の場合、確定時（blur）に空文字が `0` へ補正される想定です（`numeric` の fix フェーズ）。
+- 整数入力の `inputmode="numeric"` 又は実数入力の `inputmode="decimal"` と併用することを推奨します。
 
 #### `digits()`
 
