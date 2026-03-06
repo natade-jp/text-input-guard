@@ -3,8 +3,8 @@ layout: home
 
 hero:
     name: TextInputGuard
-    text: 入力フロー設計ライブラリ
-    tagline: 日本語入力環境に最適化されたテキスト入力ガード
+    text: input補助ライブラリ
+    tagline: 日本語向け入力補助ツール
     actions:
         - theme: brand
           text: Getting Started
@@ -27,9 +27,9 @@ import { useDemoIframes } from './composables/useDemoIframes.js';
 useDemoIframes();
 </script>
 
-TextInputGuard は、日本語入力環境を前提に設計された入力フロー制御ライブラリです。
+TextInputGuard は、日本語入力環境を前提に設計された入力補助ライブラリです。
 
-`<input>` / `<textarea>` に対して、全角混在・桁数制限・小数処理・表示整形など、日本語環境特有の数値入力制御を扱いやすい形で提供します。  
+`<input>` / `<textarea>` に対して、全角混在・桁数制限・小数処理・表示整形など、日本語環境特有の入力制御を扱いやすい形で提供します。  
 業務系フォームや金額入力など、IMEの影響を受けやすい入力欄でも、表示用の値と送信用の値を分離しながら安定した制御を行えます。
 
 ## できること
