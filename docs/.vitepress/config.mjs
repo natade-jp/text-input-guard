@@ -14,10 +14,6 @@ export default {
 		socialLinks: [
 			{ icon: "github", link: "https://github.com/natade-jp/text-input-guard" }
 		],
-		footer: {
-			message: "Released under MIT License",
-			copyright: "Copyright © 2026 natade-jp"
-		},
 		outline: {
 			level: [2, 4] // h2...h4 を表示
 		},

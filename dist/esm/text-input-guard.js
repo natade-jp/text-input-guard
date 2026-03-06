@@ -396,7 +396,7 @@ class SwapState {
  * @typedef {Object} AttachOptions
  * @property {Rule[]} [rules] - 適用するルール配列（順番がフェーズ内実行順になる）
  * @property {boolean} [warn] - 非対応ルールなどを console.warn するか
- * @property {string} [invalidClass] - エラー時に付けるclass名
+ * @property {string} [invalidClass="is-invalid"] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
  * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
  */
@@ -2697,6 +2697,104 @@ comma.fromDataset = function fromDataset(dataset, _el) {
 		return null;
 	}
 	return comma();
+};
+
+/**
+ * The script is part of TextInputGuard.
+ *
+ * AUTHOR:
+ *  natade-jp (https://github.com/natade-jp)
+ *
+ * LICENSE:
+ *  The MIT license https://opensource.org/licenses/MIT
+ */
+
+/**
+ * IMEオフ入力相当の文字変換テーブル
+ * @type {Record<string, string>}
+ */
+/* eslint-disable quote-props */
+const IME_OFF_MAP = {
+	"\u3000": "\u0020", // 全角スペース → space
+	"\u3001": "\u002C", // 、 → ,
+	"\u3002": "\u002E", // 。 → .
+	"\u300C": "\u005B", // 「 → [
+	"\u300D": "\u005D", // 」 → ]
+	"\u301C": "\u007E", // 〜 → ~
+	"\u30FC": "\u002D", // ー → -
+	"\uFFE5": "\u005C"  // ￥ → \
+};
+/* eslint-enable quote-props */
+
+/**
+ * ASCII入力欄に日本語IMEで入った文字をASCIIへ矯正する
+ * @param {string} text - 変換したいテキスト
+ * @returns {string} 変換後のテキスト
+ */
+const toImeOff = function (text) {
+	return Array.from(String(text), (ch) => {
+		// 個別マップ
+		if (ch in IME_OFF_MAP) {
+			return IME_OFF_MAP[ch];
+		}
+
+		const code = ch.charCodeAt(0);
+
+		// 全角ASCII
+		if (code >= 0xFF01 && code <= 0xFF5E) {
+			return String.fromCharCode(code - 0xFEE0);
+		}
+
+		// シングルクォート系
+		if (code >= 0x2018 && code <= 0x201B) {
+			return "'";
+		}
+
+		// ダブルクォート系
+		if (code >= 0x201C && code <= 0x201F) {
+			return '"';
+		}
+
+		return ch;
+	}).join("");
+};
+
+/**
+ * ASCII入力欄に日本語IMEで入った文字をASCIIへ矯正する
+ *
+ * 注意:
+ * - これは「半角化」ではなく「IMEオフ入力相当への寄せ」
+ * - ascii() とは責務が異なる
+ *
+ * @returns {Rule}
+ */
+function imeOff() {
+	return {
+		name: "imeOff",
+		targets: ["input", "textarea"],
+
+		normalizeChar(value, ctx) {
+			return toImeOff(value);
+		}
+	};
+}
+
+/**
+ * dataset から imeOff ルールを生成する
+ *
+ * 対応する data 属性
+ * - data-tig-rules-ime-off
+ *
+ * @param {DOMStringMap} dataset
+ * @param {HTMLInputElement|HTMLTextAreaElement} _el
+ * @returns {Rule|null}
+ */
+imeOff.fromDataset = function fromDataset(dataset, _el) {
+	if (dataset.tigRulesImeOff == null) {
+		return null;
+	}
+
+	return imeOff();
 };
 
 /**
@@ -5920,7 +6018,7 @@ kana.fromDataset = function fromDataset(dataset, _el) {
 function ascii(options = {}) {
 	/** @type {AsciiRuleOptions} */
 	const opt = {
-		case: options.case ?? null
+		case: options.case ?? "none"
 	};
 
 	return {
@@ -5932,6 +6030,10 @@ function ascii(options = {}) {
 
 			// まず半角へ正規化
 			s = Mojix.toHalfWidthAsciiCode(s);
+
+			// toHalfWidthAsciiCode で対応できていない文字も実施
+			s = s.replace(/\uFFE5/g, "\u005C");	//￥
+			s = s.replace(/[\u2010-\u2015\u2212\u30FC\uFF0D\uFF70]/g, "\u002D"); //ハイフンに似ている記号
 
 			// 英字の大文字/小文字統一
 			if (opt.case === "upper") {
@@ -7234,6 +7336,7 @@ const auto = new InputGuardAutoAttach(attach, [
 	{ name: "numeric", fromDataset: numeric.fromDataset },
 	{ name: "digits", fromDataset: digits.fromDataset },
 	{ name: "comma", fromDataset: comma.fromDataset },
+	{ name: "imeOff", fromDataset: imeOff.fromDataset },
 	{ name: "kana", fromDataset: kana.fromDataset },
 	{ name: "ascii", fromDataset: ascii.fromDataset },
 	{ name: "filter", fromDataset: filter.fromDataset },
@@ -7258,6 +7361,7 @@ const rules = {
 	numeric,
 	digits,
 	comma,
+	imeOff,
 	kana,
 	ascii,
 	filter,
@@ -7271,10 +7375,10 @@ const rules = {
 
 /**
  * バージョン（ビルド時に置換したいならここを差し替える）
- * 例: rollup replace で ""0.2.0"" を package.json の version に置換
+ * 例: rollup replace で ""0.2.1"" を package.json の version に置換
  */
 // @ts-ignore
 // eslint-disable-next-line no-undef
-const version = "0.2.0" ;
+const version = "0.2.1" ;
 
-export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, kana, length, numeric, prefix, rules, suffix, trim, version, width };
+export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };

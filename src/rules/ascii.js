@@ -9,7 +9,7 @@
  */
 
 import Mojix from "./libs/mojix.js";
-import { parseDatasetBool, parseDatasetEnum } from "./_dataset.js";
+import { parseDatasetEnum } from "./_dataset.js";
 
 /**
  * ascii ルールのオプション
@@ -28,7 +28,7 @@ import { parseDatasetBool, parseDatasetEnum } from "./_dataset.js";
 export function ascii(options = {}) {
 	/** @type {AsciiRuleOptions} */
 	const opt = {
-		case: options.case ?? null
+		case: options.case ?? "none"
 	};
 
 	return {
@@ -40,6 +40,10 @@ export function ascii(options = {}) {
 
 			// まず半角へ正規化
 			s = Mojix.toHalfWidthAsciiCode(s);
+
+			// toHalfWidthAsciiCode で対応できていない文字も実施
+			s = s.replace(/\uFFE5/g, "\u005C");	//￥
+			s = s.replace(/[\u2010-\u2015\u2212\u30FC\uFF0D\uFF70]/g, "\u002D"); //ハイフンに似ている記号
 
 			// 英字の大文字/小文字統一
 			if (opt.case === "upper") {

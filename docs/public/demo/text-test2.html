@@ -21,6 +21,7 @@
 
 			const guard = attach(input, {
 				rules: [
+					rules.imeOff(),
 					rules.ascii({
 						case: "upper"
 					}),

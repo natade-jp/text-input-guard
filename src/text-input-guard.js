@@ -140,7 +140,7 @@ import { SwapState } from "./swap-state.js";
  * @typedef {Object} AttachOptions
  * @property {Rule[]} [rules] - 適用するルール配列（順番がフェーズ内実行順になる）
  * @property {boolean} [warn] - 非対応ルールなどを console.warn するか
- * @property {string} [invalidClass] - エラー時に付けるclass名
+ * @property {string} [invalidClass="is-invalid"] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
  * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
  */

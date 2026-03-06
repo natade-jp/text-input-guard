@@ -94,11 +94,25 @@ const guards = autoAttach();
 const guard = guards.getGuards()[0];
 ```
 
-## Guard
+## 戻り値／引数の詳細
+
+### AttachOptions
+
+`attach()` に渡す設定オプションです。  
+入力のルール・エラー表示・コールバックなどを指定できます。
+
+| option         | type                               | default        | 説明                                                                                                                |
+| -------------- | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `rules`        | `Rule[]`                           | `[]`           | 適用するルール配列。配列の順番が各フェーズ内での実行順になります。                                                  |
+| `warn`         | `boolean`                          | `true`         | 非対応ルールや不正な設定があった場合に `console.warn` を出力するかどうか。                                          |
+| `invalidClass` | `string`                           | `"is-invalid"` | エラーが存在する場合に `displayElement` に付与される CSS クラス名。                                                 |
+| `onValidate`   | `(result: ValidateResult) => void` | -              | バリデーション評価が完了した際に呼び出されるコールバック。入力中 (`input`) と確定時 (`commit`) の両方で呼ばれます。 |
+
+### Guard
 
 `attach()` が返す `Guard` の公開メソッドです。
 
-### detach()
+#### detach()
 
 ```ts
 detach(): void
@@ -113,7 +127,7 @@ detach(): void
 guard.detach();
 ```
 
-### isValid()
+#### isValid()
 
 ```ts
 isValid(): boolean
@@ -125,7 +139,7 @@ isValid(): boolean
 guard.isValid();
 ```
 
-### getErrors()
+#### getErrors()
 
 ```ts
 getErrors(): TigError[]
@@ -138,7 +152,7 @@ getErrors(): TigError[]
 guard.getErrors();
 ```
 
-### getRawValue()
+#### getRawValue()
 
 ```ts
 getRawValue(): string
@@ -153,7 +167,7 @@ getRawValue(): string
 guard.getRawValue();
 ```
 
-### getDisplayValue()
+#### getDisplayValue()
 
 ```ts
 getDisplayValue(): string
@@ -165,7 +179,7 @@ getDisplayValue(): string
 guard.getDisplayValue();
 ```
 
-### getRawElement()
+#### getRawElement()
 
 ```ts
 getRawElement(): HTMLInputElement | HTMLTextAreaElement
@@ -180,7 +194,7 @@ getRawElement(): HTMLInputElement | HTMLTextAreaElement
 guard.getRawElement();
 ```
 
-### getDisplayElement()
+#### getDisplayElement()
 
 ```ts
 getDisplayElement(): HTMLInputElement | HTMLTextAreaElement
@@ -192,7 +206,7 @@ getDisplayElement(): HTMLInputElement | HTMLTextAreaElement
 guard.getDisplayElement();
 ```
 
-### evaluate()
+#### evaluate()
 
 ```ts
 evaluate(): void
@@ -212,7 +226,7 @@ evaluate(): void
 guard.evaluate();
 ```
 
-### commit()
+#### commit()
 
 ```ts
 commit(): void
@@ -231,7 +245,7 @@ commit(): void
 
 通常は `blur` 時に自動実行されます。
 
-### setValue()
+#### setValue()
 
 ```ts
 setValue(value: string | number | null | undefined, mode?: "evaluate" | "commit"): void
@@ -254,7 +268,7 @@ guard.setValue("0012", "input");
 guard.setValue("", "none");
 ```
 
-## GuardGroup
+### GuardGroup
 
 `attachAll()` / `autoAttach()` が返す `GuardGroup` の公開メソッドです。
 
@@ -268,20 +282,105 @@ guard.setValue("", "none");
  */
 ```
 
-## TigError
+### onValidate
 
-バリデーションエラー情報を表すオブジェクトです。
-エラーは `validate` フェーズで登録され、 `guard.getErrors();` で取得できます。
+`onValidate` は評価完了時に呼び出され、現在のエラー状態を受け取ることができます。  
+エラーが存在しない場合でも呼び出されます。
 
-```js
-/**
- * @typedef {Object} TigError
- * @property {string} code - エラー識別子（例: "digits.int_overflow"）
- * @property {string} rule - エラーを発生させたルール名
- * @property {PhaseName} phase - 発生したフェーズ
- * @property {any} [detail] - 追加情報（制限値など）
- */
+コールバックには `ValidateResult` が渡されます。
+
+| property  | type                  | 説明                                    |
+| --------- | --------------------- | --------------------------------------- |
+| `guard`   | `Guard`               | この結果を発生させた Guard インスタンス |
+| `source`  | `"input" \| "commit"` | 評価が実行されたタイミング              |
+| `errors`  | `TigError[]`          | 発生しているエラー一覧                  |
+| `isValid` | `boolean`             | エラーが存在しない場合 `true`           |
+
+### TigError
+
+バリデーションエラーを表すオブジェクトです。  
+ルールの評価中に制約違反が発生した場合に生成されます。
+
+エラーは以下の方法で取得できます。
+
+- `guard.getErrors()`
+- `onValidate` コールバック
+
+#### 構造
+
+| property | type        | 説明                           |
+| -------- | ----------- | ------------------------------ |
+| `code`   | `string`    | エラー識別子                   |
+| `rule`   | `string`    | エラーを発生させたルール名     |
+| `phase`  | `PhaseName` | エラーが発生したフェーズ       |
+| `detail` | `any`       | エラーの追加情報（制限値など） |
+
+#### code
+
+`code` は `"rule.reason"` 形式の文字列です。
+
+例
+
+| code                   | 説明                               |
+| ---------------------- | ---------------------------------- |
+| `length.max_overflow`  | 最大文字数を超えている             |
+| `width.max_overflow`   | 表示幅の制限を超えている           |
+| `bytes.max_overflow`   | バイト数の制限を超えている         |
+| `digits.int_overflow`  | 整数部の桁数を超えている           |
+| `digits.frac_overflow` | 小数部の桁数を超えている           |
+| `filter.invalid_char`  | 許可されていない文字が含まれている |
+
+#### phase
+
+エラーが発生した処理フェーズを表します。
+通常バリデーションで発生します。
+
+| phase                | 説明             |
+| -------------------- | ---------------- |
+| `normalizeChar`      | 文字単位の正規化 |
+| `normalizeStructure` | 構造の正規化     |
+| `validate`           | バリデーション   |
+| `fix`                | 確定時の補正     |
+| `format`             | 表示フォーマット |
+
+#### detail
+
+`detail` にはエラーの追加情報が格納されます。
+
+##### 文字数制限系
+
+制限エラーでは以下の形式になります。
+
+| property | type     | 説明                 |
+| -------- | -------- | -------------------- |
+| `limit`  | `number` | 設定されている制限値 |
+| `actual` | `number` | 実際の値             |
+
+例
+
+```json
+{
+	"code": "length.max_overflow",
+	"rule": "length",
+	"phase": "validate",
+	"detail": {
+		"limit": 10,
+		"actual": 12
+	}
+}
 ```
+
+##### filter
+
+`filter.invalid_char` の場合は以下の情報が含まれます。
+
+| property   | type       | 説明                                 |
+| ---------- | ---------- | ------------------------------------ |
+| `count`    | `number`   | 不正文字の総数                       |
+| `chars`    | `string[]` | 検出された不正文字                   |
+| `category` | `string[]` | 許可カテゴリ                         |
+| `hasAllow` | `boolean`  | `allow` オプションが指定されているか |
+| `hasDeny`  | `boolean`  | `deny` オプションが指定されているか  |
 
 ## Rules
 
@@ -318,9 +417,33 @@ rules.kana({
 | `target` | `"katakana-full" \| "katakana-half" \| "hiragana"` | `"katakana-full"` | 統一先                                                   |
 | `nfkc`   | `boolean`                                          | `true`            | 事前に Unicode NFKC 正規化を行う（合体文字などを正規化） |
 
+#### `imeOff()`
+
+ASCII入力欄に日本語IMEで入った文字を、IMEオフ入力相当の ASCII 文字へ寄せます。
+
+主に次のような文字を変換します。
+
+- `、` → `,`
+- `。` → `.`
+- `「` → `[`
+- `」` → `]`
+- `￥` → `\`
+- 全角ASCII (`ＡＢＣ１２３！` など) → 半角ASCII
+
+**例**
+
+```js
+rules.imeOff();
+```
+
+**補足**
+
+- 単なる「半角化」ではなく、日本語IME入力で入りやすい文字を ASCII 入力向けに矯正するルールです。
+
 #### `ascii()`
 
 ASCII範囲へ正規化します（カナは対象外）。
+全角英数字・全角記号・全角スペースなどを半角ASCIIへ正規化し、必要に応じて英字の大文字/小文字を統一します。
 
 **例**
 
@@ -333,6 +456,11 @@ rules.ascii();
 | option | type                           | default  | 説明   |
 | ------ | ------------------------------ | -------- | ------ |
 | `case` | `"none" \| "upper" \| "lower"` | `"none"` | 統一先 |
+
+**補足**
+
+- `ascii()` は ASCII 相当文字の半角化・英字統一を行うルールです。
+- `、` や `。` などは `ascii()` だけでは ASCII の `,` や `.` になりません。これらも半角にしたい場合、先に `imeOff()` で ASCII 入力相当に寄せ、その後に `ascii()` を適用する組み合わせをおすすめします。
 
 #### `filter()`
 

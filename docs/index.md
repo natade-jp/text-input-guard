@@ -68,12 +68,13 @@ const input = document.querySelector("#memberCode");
 
 const guard = attach(input, {
 	rules: [
+		rules.imeOff(),
 		rules.ascii({
 			case: "upper"
 		}),
 		rules.filter({
 			category: ["alpha-upper", "digits"],
-			allow: /[-_@]/
+			allow: /[-_]/
 		}),
 		rules.length({
 			max: 5,

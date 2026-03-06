@@ -459,6 +459,30 @@ declare namespace comma {
 }
 
 /**
+ * ASCII入力欄に日本語IMEで入った文字をASCIIへ矯正する
+ *
+ * 注意:
+ * - これは「半角化」ではなく「IMEオフ入力相当への寄せ」
+ * - ascii() とは責務が異なる
+ *
+ * @returns {import("../text-input-guard.js").Rule}
+ */
+declare function imeOff(): Rule;
+declare namespace imeOff {
+    /**
+     * dataset から imeOff ルールを生成する
+     *
+     * 対応する data 属性
+     * - data-tig-rules-ime-off
+     *
+     * @param {DOMStringMap} dataset
+     * @param {HTMLInputElement|HTMLTextAreaElement} _el
+     * @returns {import("../text-input-guard.js").Rule|null}
+     */
+    function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
+}
+
+/**
  * kana ルールのオプション
  * @typedef {Object} KanaRuleOptions
  * @property {"katakana-full"|"katakana-half"|"hiragana"} [target="katakana-full"] - 統一先
@@ -885,6 +909,7 @@ declare namespace rules {
     export { numeric };
     export { digits };
     export { comma };
+    export { imeOff };
     export { kana };
     export { ascii };
     export { filter };
@@ -901,4 +926,4 @@ declare namespace rules {
  */
 declare const version: any;
 
-export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, kana, length, numeric, prefix, rules, suffix, trim, version, width };
+export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };

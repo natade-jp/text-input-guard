@@ -5,11 +5,15 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
+		rules.ascii({
+			case: "upper"
+		}),
 		rules.length({
 			max: 5,
-			overflowInput: "block",
+			mode: "block",
 			unit: "grapheme"
-		})
+		}),
+		rules.trim()
 	]
 });
 guard.setValue("123");

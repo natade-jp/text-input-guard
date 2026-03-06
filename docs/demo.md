@@ -69,6 +69,7 @@ import { attach, rules } from "./lib/text-input-guard.min.js";
 const input = document.getElementById("code");
 const guard = attach(input, {
 	rules: [
+		rules.imeOff(),
 		rules.ascii({
 			case: "upper"
 		}),
@@ -270,7 +271,7 @@ const guard = attach(input, {
 		}),
 		rules.digits({
 			int: 8,
-			frac: 4,
+			frac: 2,
 			modeInt: "block",
 			modeFrac: "block"
 		}),

@@ -17,6 +17,7 @@ import { InputGuardAutoAttach } from "./auto-attach.js";
 import { numeric } from "./rules/numeric.js";
 import { digits } from "./rules/digits.js";
 import { comma } from "./rules/comma.js";
+import { imeOff } from "./rules/ime-off.js";
 import { kana } from "./rules/kana.js";
 import { ascii } from "./rules/ascii.js";
 import { filter } from "./rules/filter.js";
@@ -28,13 +29,15 @@ import { suffix } from "./rules/suffix.js";
 import { trim } from "./rules/trim.js";
 
 // ---- individual exports (ESM/CJS) ----
-export { attach, attachAll, numeric, digits, comma, kana, ascii, filter, length, width, bytes, prefix, suffix, trim };
+// eslint-disable-next-line max-len
+export { attach, attachAll, numeric, digits, comma, imeOff, kana, ascii, filter, length, width, bytes, prefix, suffix, trim };
 
 // ---- autoAttach ----
 const auto = new InputGuardAutoAttach(attach, [
 	{ name: "numeric", fromDataset: numeric.fromDataset },
 	{ name: "digits", fromDataset: digits.fromDataset },
 	{ name: "comma", fromDataset: comma.fromDataset },
+	{ name: "imeOff", fromDataset: imeOff.fromDataset },
 	{ name: "kana", fromDataset: kana.fromDataset },
 	{ name: "ascii", fromDataset: ascii.fromDataset },
 	{ name: "filter", fromDataset: filter.fromDataset },
@@ -59,6 +62,7 @@ export const rules = {
 	numeric,
 	digits,
 	comma,
+	imeOff,
 	kana,
 	ascii,
 	filter,
