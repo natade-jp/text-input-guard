@@ -30,6 +30,6 @@ export default {
 		search: {
 			provider: "local"
 		},
-		aside: "right"
+		aside: "left"
 	}
 };
