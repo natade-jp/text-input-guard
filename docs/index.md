@@ -5,6 +5,10 @@ hero:
     name: TextInputGuard
     text: input補助ライブラリ
     tagline: 日本語向け入力補助ツール
+    image:
+        light: /hero-light.svg
+        dark: /hero-dark.svg
+        alt: TextInputGuard
     actions:
         - theme: brand
           text: Getting Started

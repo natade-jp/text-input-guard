@@ -3,6 +3,11 @@ export default {
 	title: "TextInputGuard",
 	description: "Input guard for text inputs",
 	themeConfig: {
+		logo: {
+			light: "/hero-light.svg",
+			dark: "/hero-dark.svg",
+			alt: "TextInputGuard"
+		},
 		nav: [
 			{ text: "Home", link: "/" },
 			{ text: "Getting Started", link: "/getting-started" },
@@ -19,6 +24,7 @@ export default {
 		},
 		search: {
 			provider: "local"
-		}
+		},
+		aside: "right"
 	}
 };
