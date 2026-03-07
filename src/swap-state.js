@@ -163,12 +163,16 @@ export class SwapState {
 		// raw化（送信担当）
 		input.type = "hidden";
 		input.removeAttribute("id");
+		input.removeAttribute("class");
 		input.className = "";
 		input.dataset.tigRole = "raw";
 
 		// 元idのメタを残す（デバッグ/参照用）
 		if (this.originalId) {
 			input.dataset.tigOriginalId = this.originalId;
+		}
+		if (this.originalClass) {
+			input.dataset.tigOriginalClass = this.originalClass;
 		}
 		if (this.originalName) {
 			input.dataset.tigOriginalName = this.originalName;
@@ -190,7 +194,10 @@ export class SwapState {
 			display.id = this.originalId;
 		}
 
-		display.className = this.originalClass ?? "";
+		if (this.originalClass) {
+			display.className = this.originalClass;
+		}
+
 		display.value = raw.value;
 
 		for (const [name, v] of Object.entries(this.originalUiAttrs)) {
@@ -251,6 +258,7 @@ export class SwapState {
 
 		delete raw.dataset.tigRole;
 		delete raw.dataset.tigOriginalId;
+		delete raw.dataset.tigOriginalClass;
 		delete raw.dataset.tigOriginalName;
 	}
 }

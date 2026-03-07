@@ -2,6 +2,11 @@ export default {
 	base: "/text-input-guard/",
 	title: "TextInputGuard",
 	description: "Input guard for text inputs",
+	head: [
+		["meta", { property: "og:type", content: "website" }],
+		["meta", { property: "og:title", content: "TextInputGuard" }],
+		["meta", { property: "og:description", content: "IME入力でも安定したフォーム入力を実現する日本語向け入力制御ライブラリ" }]
+	],
 	themeConfig: {
 		logo: {
 			light: "/hero-light.svg",
