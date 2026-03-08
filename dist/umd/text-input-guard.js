@@ -477,7 +477,6 @@
 		if (!inputGuard) {
 			return;
 		}
-		console.log("selectionchange");
 		inputGuard.onSelectionChange();
 	});
 
@@ -936,8 +935,6 @@
 			this.displayElement.addEventListener("input", this.onInput);
 			this.displayElement.addEventListener("beforeinput", this.onBeforeInput);
 			this.displayElement.addEventListener("blur", this.onBlur);
-
-			// フォーカスで編集用に戻す
 			this.displayElement.addEventListener("focus", this.onFocus);
 		}
 
@@ -7065,7 +7062,7 @@
 						code: "bytes.max_overflow",
 						rule: "bytes",
 						phase: "validate",
-						detail: { max: opt.max, actual: len }
+						detail: { limit: opt.max, actual: len }
 					});
 				}
 			}

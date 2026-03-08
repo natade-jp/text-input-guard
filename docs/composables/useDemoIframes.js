@@ -47,7 +47,7 @@ export function useDemoIframes() {
 				de?.offsetHeight ?? 0
 			);
 
-			iframe.style.height = Math.max(100, h) + "px";
+			iframe.style.height = Math.max(0, h) + "px";
 		});
 	};
 

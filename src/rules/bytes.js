@@ -179,7 +179,7 @@ export function bytes(options = {}) {
 					code: "bytes.max_overflow",
 					rule: "bytes",
 					phase: "validate",
-					detail: { max: opt.max, actual: len }
+					detail: { limit: opt.max, actual: len }
 				});
 			}
 		}

@@ -211,6 +211,13 @@ const guard = attach(input, {
 <input id="price" type="text" inputmode="decimal" style="text-align: right" />
 ```
 
+```css
+.is-invalid {
+	border: 2px solid var(--invalid-border);
+	background: var(--invalid-bg);
+}
+```
+
 ```js
 import { attach, rules } from "./lib/text-input-guard.min.js";
 
@@ -387,4 +394,122 @@ const guard = guards.getGuards()[0];
 import { autoAttach } from "./lib/text-input-guard.min.js";
 const guards = autoAttach();
 const guard = guards.getGuards()[0];
+```
+
+## エラー処理
+
+エラー発生時のコールバック関数を使用してエラー表示を実装する。
+
+<iframe
+  :src="withBase('/demo/error-test.html')"
+  style="width: 100%; border-style: none;"
+></iframe>
+
+```html
+<input id="name" type="text" />
+<div id="name-errors" class="error-bubble" aria-live="polite"></div>
+```
+
+```css
+.is-invalid {
+	border: 2px solid var(--invalid-border);
+	background: var(--invalid-bg);
+}
+
+.error-bubble {
+	display: none;
+	margin-top: 6px;
+	padding: 8px 12px;
+	border: 1px solid var(--invalid-border);
+	border-radius: 8px;
+	background: var(--invalid-bg);
+	color: var(--text);
+	font-size: 14px;
+	line-height: 1.4;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	position: relative;
+	max-width: 420px;
+}
+
+.error-bubble.show {
+	display: block;
+}
+
+.error-bubble::before {
+	content: "";
+	position: absolute;
+	top: -8px;
+	left: 16px;
+	border-width: 0 8px 8px 8px;
+	border-style: solid;
+	border-color: transparent transparent var(--invalid-border) transparent;
+}
+
+.error-bubble::after {
+	content: "";
+	position: absolute;
+	top: -7px;
+	left: 16px;
+	border-width: 0 8px 8px 8px;
+	border-style: solid;
+	border-color: transparent transparent var(--invalid-bg) transparent;
+}
+```
+
+```js
+import { attach, rules } from "./lib/text-input-guard.min.js";
+
+const input = document.getElementById("name");
+const errorBox = document.getElementById("name-errors");
+
+function formatErrorMessage(error) {
+	switch (error.code) {
+		case "length.max_overflow":
+			return `文字数が多すぎます（最大 ${error.detail?.limit} 文字、現在 ${error.detail?.actual} 文字）`;
+		case "bytes.max_overflow":
+			return `文字容量が大きすぎます（最大 ${error.detail?.limit} バイト、現在 ${error.detail?.actual} バイト）`;
+		default:
+			return error.code;
+	}
+}
+
+function renderErrors(errors) {
+	errorBox.innerHTML = "";
+
+	if (!errors || errors.length === 0) {
+		errorBox.classList.remove("show");
+		return;
+	}
+
+	const ul = document.createElement("ul");
+	ul.style.margin = "0";
+	ul.style.paddingLeft = "1.2em";
+
+	for (const error of errors) {
+		const li = document.createElement("li");
+		li.textContent = formatErrorMessage(error);
+		ul.appendChild(li);
+	}
+
+	errorBox.appendChild(ul);
+	errorBox.classList.add("show");
+}
+
+attach(input, {
+	rules: [
+		rules.length({
+			max: 5,
+			mode: "error",
+			unit: "grapheme"
+		}),
+		rules.bytes({
+			max: 5,
+			mode: "error",
+			unit: "utf-8"
+		})
+	],
+	onValidate(result) {
+		renderErrors(result.errors);
+	}
+});
 ```

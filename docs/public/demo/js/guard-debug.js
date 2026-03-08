@@ -1,5 +1,5 @@
 // demo/js/guard-debug.js
-export function bindGuardDebug(guard, outputEl, opts = {}) {
+export function bindGuardDebug(guard, outputEl = null, opts = {}) {
 	const el = guard.getDisplayElement();
 	const events = opts.events ?? ["compositionend", "input", "blur"];
 
@@ -11,15 +11,17 @@ export function bindGuardDebug(guard, outputEl, opts = {}) {
 			["guard.getErrors()", JSON.stringify(guard.getErrors(), null, 2)]
 		];
 
-		outputEl.innerHTML = rows
-			.map(([k, v]) => `
+		if (outputEl !== null) {
+			outputEl.innerHTML = rows
+				.map(([k, v]) => `
         <div class="row">
           <div class="key" title="${escapeHtml(k)}">${escapeHtml(k)}</div>
           <div class="sep">:</div>
           <div class="val">${escapeHtml(v)}</div>
         </div>
       `)
-			.join("");
+				.join("");
+		}
 	}
 
 	for (const ev of events) { el.addEventListener(ev, render); }
