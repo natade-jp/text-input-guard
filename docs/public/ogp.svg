@@ -58,13 +58,13 @@
        inkscape:collect="always"
        style="color-interpolation-filters:sRGB"
        id="filter1366"
-       x="-0.47976034"
-       y="-0.48867959"
-       width="1.9595208"
-       height="1.9773593">
+       x="-0.79600244"
+       y="-0.79600243"
+       width="2.5920049"
+       height="2.5920049">
       <feGaussianBlur
          inkscape:collect="always"
-         stdDeviation="39.759397"
+         stdDeviation="159.85105"
          id="feGaussianBlur1368" />
     </filter>
     <linearGradient
@@ -77,19 +77,6 @@
        y2="118.75"
        gradientUnits="userSpaceOnUse"
        gradientTransform="matrix(1.2471574,0,0,1.2471574,-16.359033,-61.951153)" />
-    <filter
-       inkscape:collect="always"
-       style="color-interpolation-filters:sRGB"
-       id="filter854"
-       x="-0.20523139"
-       y="-0.20523138"
-       width="1.4104628"
-       height="1.4104628">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="40.550374"
-         id="feGaussianBlur856" />
-    </filter>
   </defs>
   <sodipodi:namedview
      id="namedview9"
@@ -105,16 +92,15 @@
      inkscape:cy="392.1875"
      inkscape:window-width="2125"
      inkscape:window-height="1031"
-     inkscape:window-x="342"
-     inkscape:window-y="235"
+     inkscape:window-x="463"
+     inkscape:window-y="298"
      inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="layer3" />
   <g
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="bg"
-     style="display:inline"
-     sodipodi:insensitive="true">
+     style="display:inline">
     <rect
        style="fill:#232830;fill-opacity:1;stroke-width:0.999999;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
        id="rect1481"
@@ -123,25 +109,25 @@
        x="0"
        y="-0.1"
        rx="0"
-       ry="0"
-       sodipodi:insensitive="true" />
+       ry="0" />
   </g>
   <g
      inkscape:groupmode="layer"
      id="layer1"
      inkscape:label="blur"
-     style="display:inline;opacity:0.686117;mix-blend-mode:normal;filter:url(#filter1366)">
+     style="display:inline;opacity:0.770624;mix-blend-mode:normal;filter:url(#filter1366)"
+     sodipodi:insensitive="true">
     <g
        id="g1364"
-       transform="matrix(0.73299421,0,0,0.70992909,442.36261,131.42728)"
-       style="opacity:0.507042;stroke-width:1.38625;filter:url(#filter854)">
+       transform="matrix(1.0163657,0,0,1.0163657,252.69773,30.818621)"
+       style="stroke-width:0.983898">
       <path
          id="circle839"
-         style="fill:#2ac53f;stroke-width:55.4499;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+         style="fill:#2ac53f;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
          d="M 924.86328,262.71389 A 237.10042,237.10042 0 0 1 687.76286,499.81431 237.10042,237.10042 0 0 1 450.66244,262.71389 237.10042,237.10042 0 0 1 687.76286,25.613479 237.10042,237.10042 0 0 1 924.86328,262.71389 Z" />
       <path
          id="circle839-3"
-         style="display:inline;mix-blend-mode:normal;fill:#ffffff;stroke-width:55.4499;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+         style="display:inline;mix-blend-mode:normal;fill:#ffffff;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
          d="M 924.86327,262.71389 C 924.86327,131.76695 818.7098,25.613475 687.76286,25.613465 556.81591,25.613465 450.66244,131.76694 450.66244,262.71389 924.86327,262.71389 450.66244,262.71389 924.86327,262.71389 Z"
          sodipodi:nodetypes="cscc" />
     </g>
