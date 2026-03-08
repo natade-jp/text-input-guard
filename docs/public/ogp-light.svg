@@ -8,9 +8,9 @@
    aria-labelledby="title desc"
    version="1.1"
    id="svg16"
-   sodipodi:docname="ogp-dark.svg"
+   sodipodi:docname="ogp-light.svg"
    inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
-   inkscape:export-filename="ogp-dark.png"
+   inkscape:export-filename="ogp-light.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -24,11 +24,11 @@
        inkscape:collect="always"
        id="linearGradient37138">
       <stop
-         style="stop-color:#24ab37;stop-opacity:1"
+         style="stop-color:#1b7f28;stop-opacity:1"
          offset="0"
          id="stop37134" />
       <stop
-         style="stop-color:#ffffff;stop-opacity:1"
+         style="stop-color:#88e695;stop-opacity:1"
          offset="1"
          id="stop37136" />
     </linearGradient>
@@ -54,19 +54,6 @@
        y2="407.41464"
        gradientUnits="userSpaceOnUse"
        gradientTransform="translate(669.98801,38.619637)" />
-    <filter
-       inkscape:collect="always"
-       style="color-interpolation-filters:sRGB"
-       id="filter1366"
-       x="-0.79600244"
-       y="-0.79600243"
-       width="2.5920049"
-       height="2.5920049">
-      <feGaussianBlur
-         inkscape:collect="always"
-         stdDeviation="159.85105"
-         id="feGaussianBlur1368" />
-    </filter>
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient37138"
@@ -77,6 +64,19 @@
        y2="118.75"
        gradientUnits="userSpaceOnUse"
        gradientTransform="matrix(1.2471574,0,0,1.2471574,-16.359033,-61.951153)" />
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter4636"
+       x="-0.35251509"
+       y="-0.35251507"
+       width="1.7050302"
+       height="1.7050301">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="70.791117"
+         id="feGaussianBlur4638" />
+    </filter>
   </defs>
   <sodipodi:namedview
      id="namedview9"
@@ -88,49 +88,43 @@
      inkscape:pagecheckerboard="0"
      showgrid="false"
      inkscape:zoom="0.64"
-     inkscape:cx="565.625"
+     inkscape:cx="542.96875"
      inkscape:cy="392.1875"
      inkscape:window-width="2125"
      inkscape:window-height="1031"
-     inkscape:window-x="463"
-     inkscape:window-y="298"
+     inkscape:window-x="421"
+     inkscape:window-y="275"
      inkscape:window-maximized="0"
-     inkscape:current-layer="layer3" />
+     inkscape:current-layer="layer4" />
   <g
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="bg"
-     style="display:inline">
+     style="display:inline"
+     sodipodi:insensitive="true">
     <rect
-       style="fill:#232830;fill-opacity:1;stroke-width:0.999999;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:0.999999;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
        id="rect1481"
        width="1200"
        height="630"
        x="0"
        y="-0.1"
        rx="0"
-       ry="0" />
+       ry="0"
+       sodipodi:insensitive="true" />
   </g>
   <g
      inkscape:groupmode="layer"
      id="layer1"
      inkscape:label="blur"
-     style="display:inline;opacity:0.770624;mix-blend-mode:normal;filter:url(#filter1366)"
+     style="display:inline;opacity:0.770624;mix-blend-mode:normal"
      sodipodi:insensitive="true">
-    <g
-       id="g1364"
-       transform="matrix(1.0163657,0,0,1.0163657,252.69773,30.818621)"
-       style="stroke-width:0.983898">
-      <path
-         id="circle839"
-         style="fill:#2ac53f;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
-         d="M 924.86328,262.71389 A 237.10042,237.10042 0 0 1 687.76286,499.81431 237.10042,237.10042 0 0 1 450.66244,262.71389 237.10042,237.10042 0 0 1 687.76286,25.613479 237.10042,237.10042 0 0 1 924.86328,262.71389 Z" />
-      <path
-         id="circle839-3"
-         style="display:inline;mix-blend-mode:normal;fill:#ffffff;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
-         d="M 924.86327,262.71389 C 924.86327,131.76695 818.7098,25.613475 687.76286,25.613465 556.81591,25.613465 450.66244,131.76694 450.66244,262.71389 924.86327,262.71389 450.66244,262.71389 924.86327,262.71389 Z"
-         sodipodi:nodetypes="cscc" />
-    </g>
+    <path
+       id="circle839"
+       style="opacity:0.414487;fill:#000000;stroke-width:49.4605;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke;filter:url(#filter4636)"
+       d="M 1192.697,297.83201 A 240.98073,240.98073 0 0 1 951.71631,538.81274 240.98073,240.98073 0 0 1 710.73558,297.83201 240.98073,240.98073 0 0 1 951.71631,56.851283 240.98073,240.98073 0 0 1 1192.697,297.83201 Z"
+       transform="matrix(0.80872433,0,0,0.80872433,145.32143,46.811768)"
+       sodipodi:insensitive="true" />
   </g>
   <g
      inkscape:groupmode="layer"
@@ -192,8 +186,7 @@
      inkscape:groupmode="layer"
      id="layer4"
      inkscape:label="text"
-     style="display:inline"
-     sodipodi:insensitive="true">
+     style="display:inline">
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:93.1211px;line-height:1.25;font-family:sans-serif;letter-spacing:-4.08px;word-spacing:0px;fill:url(#linearGradient37140);fill-opacity:1;stroke:none;stroke-width:1"
@@ -219,12 +212,12 @@
          id="tspan5871-6"
          x="31.502045"
          y="304.56128"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#f2f2f2;stroke-width:0.999998"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#414141;fill-opacity:1;stroke-width:0.999998"
          dy="10">日本語向け</tspan><tspan
          sodipodi:role="line"
          x="31.502045"
          y="403.0108"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#f2f2f2;stroke-width:0.999998"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#414141;fill-opacity:1;stroke-width:0.999998"
          id="tspan34768">入力制御ライブラリ</tspan></text>
     <text
        xml:space="preserve"
@@ -235,7 +228,7 @@
          sodipodi:role="line"
          x="33.515869"
          y="478.39584"
-         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:34.645px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Medium';fill:#cccccc;stroke-width:1"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:34.645px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Medium';fill:#9c9c9c;fill-opacity:1;stroke-width:1"
          id="tspan54086">IME入力でも安定したフォーム入力を実現</tspan></text>
   </g>
 </svg>
