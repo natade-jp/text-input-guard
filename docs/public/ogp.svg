@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1200"
+   height="630"
+   viewBox="0 0 1200 630"
+   fill="none"
+   role="img"
+   aria-labelledby="title desc"
+   version="1.1"
+   id="svg16"
+   sodipodi:docname="ogp.svg.2026_03_08_14_41_34.0.svg"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   inkscape:export-filename="ogp.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs11">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient37138">
+      <stop
+         style="stop-color:#24ab37;stop-opacity:1"
+         offset="0"
+         id="stop37134" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1"
+         offset="1"
+         id="stop37136" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient17343">
+      <stop
+         style="stop-color:#cacaca;stop-opacity:1"
+         offset="0"
+         id="stop17339" />
+      <stop
+         style="stop-color:#3e3e3e;stop-opacity:1"
+         offset="1"
+         id="stop17341" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient17343"
+       id="linearGradient17345"
+       x1="174.02223"
+       y1="17.155869"
+       x2="174.82927"
+       y2="407.41464"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(669.98801,38.619637)" />
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter1366"
+       x="-0.79600244"
+       y="-0.79600243"
+       width="2.5920049"
+       height="2.5920049">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="159.85105"
+         id="feGaussianBlur1368" />
+    </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient37138"
+       id="linearGradient37140"
+       x1="548.4375"
+       y1="270.3125"
+       x2="43.75"
+       y2="118.75"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.2471574,0,0,1.2471574,-16.359033,-61.951153)" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#cccccc"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="1"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="0.64"
+     inkscape:cx="894.53125"
+     inkscape:cy="389.0625"
+     inkscape:window-width="2125"
+     inkscape:window-height="1031"
+     inkscape:window-x="768"
+     inkscape:window-y="198"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer3" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="bg"
+     style="display:inline">
+    <rect
+       style="fill:#000000;stroke-width:0.999999;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+       id="rect1481"
+       width="1200"
+       height="630"
+       x="0"
+       y="-0.1"
+       rx="0"
+       ry="0" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="blur"
+     style="display:inline;opacity:0.770624;mix-blend-mode:normal;filter:url(#filter1366)"
+     sodipodi:insensitive="true">
+    <g
+       id="g1364"
+       transform="matrix(1.0163657,0,0,1.0163657,252.69773,30.818621)"
+       style="stroke-width:0.983898">
+      <path
+         id="circle839"
+         style="fill:#2ac53f;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+         d="M 924.86328,262.71389 A 237.10042,237.10042 0 0 1 687.76286,499.81431 237.10042,237.10042 0 0 1 450.66244,262.71389 237.10042,237.10042 0 0 1 687.76286,25.613479 237.10042,237.10042 0 0 1 924.86328,262.71389 Z" />
+      <path
+         id="circle839-3"
+         style="display:inline;mix-blend-mode:normal;fill:#ffffff;stroke-width:39.3558;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+         d="M 924.86327,262.71389 C 924.86327,131.76695 818.7098,25.613475 687.76286,25.613465 556.81591,25.613465 450.66244,131.76694 450.66244,262.71389 924.86327,262.71389 450.66244,262.71389 924.86327,262.71389 Z"
+         sodipodi:nodetypes="cscc" />
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="icon"
+     style="display:inline"
+     sodipodi:insensitive="true">
+    <g
+       id="g37102"
+       transform="matrix(0.86970378,0,0,0.86970378,137.19714,63.692821)"
+       style="stroke-width:1.14982">
+      <rect
+         x="691.76709"
+         y="113.41785"
+         width="467.68433"
+         height="241.37251"
+         rx="32.19487"
+         fill="#ffffff"
+         stroke="#0f172a"
+         stroke-width="16.0975"
+         id="rect6"
+         ry="32.194866"
+         style="fill:url(#linearGradient17345);fill-opacity:1;stroke:none" />
+      <g
+         aria-label="ABC"
+         transform="matrix(1.0137604,0,0,0.98642634,667.98801,36.619637)"
+         id="text8"
+         style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.14981;stroke-opacity:1">
+        <path
+           id="path32180"
+           style="-inkscape-font-specification:'Noto Sans JP Bold';fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.14981;stroke-opacity:1"
+           d="M 348.17969,134.23047 C 340.45255,134.23047 333.11263,135.62723 326.1582,138.41992 319.31416,141.21262 313.24197,145.2935 307.94336,150.66406 302.75514,156.03463 298.67187,162.5867 295.69141,170.32031 292.71094,177.94651 291.2207,186.70019 291.2207,196.58203 291.2207,206.46387 292.65531,215.2195 295.52539,222.8457 298.50586,230.4719 302.53545,236.91653 307.61328,242.17969 312.8015,247.44284 318.76244,251.41628 325.49609,254.10156 332.22974,256.67943 339.46036,257.96875 347.1875,257.96875 355.2458,257.96875 362.53009,256.51925 369.04297,253.61914 375.55584,250.61163 381.35185,246.20646 386.42969,240.40625 L 373.34961,225.58398 C 370.14837,229.02115 366.4506,231.86741 362.25586,234.12305 358.17152,236.27127 353.4783,237.3457 348.17969,237.3457 341.7772,237.3457 336.14807,235.68131 331.29102,232.35156 326.54434,229.02181 322.84657,224.29432 320.19727,218.17188 317.65835,211.94202 316.38867,204.47766 316.38867,195.77734 316.38867,187.18444 317.7696,179.82752 320.5293,173.70508 323.28899,167.58263 327.09607,162.90984 331.95312,159.6875 336.92057,156.35775 342.49602,154.69336 348.67773,154.69336 353.31401,154.69336 357.4529,155.60565 361.0957,157.43164 364.84888,159.25763 368.27047,161.67412 371.36133,164.68164 L 384.11133,149.53711 C 380.24776,145.45548 375.22468,141.90986 369.04297,138.90234 362.97165,135.78741 356.01722,134.23047 348.17969,134.23047 Z M 101.96094,136.32422 62.71875,255.71289 H 87.554688 L 96.195312,225.09961 H 135.79102 L 144.34961,255.71289 H 170.17969 L 130.9375,136.32422 Z M 184.58594,136.32422 V 255.71289 H 228.29883 C 237.35061,255.71289 245.40979,254.47828 252.47461,252.00781 259.64981,249.42995 265.27894,245.56199 269.36328,240.40625 273.55801,235.14309 275.65625,228.53828 275.65625,220.58984 275.65625,212.64141 273.50239,206.35697 269.19727,201.73828 264.89215,197.01218 259.42795,193.89829 252.80469,192.39453 V 191.75 C 256.3371,190.46106 259.31757,188.47239 261.74609,185.78711 264.17462,183.10183 266.0523,180.04068 267.37695,176.60352 268.81199,173.05894 269.5293,169.46058 269.5293,165.80859 269.5293,158.39722 267.54231,152.5445 263.56836,148.24805 259.70479,143.95159 254.40553,140.89045 247.67188,139.06445 241.04861,137.23846 233.54376,136.32422 225.1543,136.32422 Z M 115.53906,154.53125 H 116.20117 C 118.07776,160.86852 119.84418,167.42059 121.5,174.1875 123.2662,180.847 125.0863,187.29163 126.96289,193.52148 L 130.61133,206.57227 H 101.42383 L 105.10742,193.52148 C 106.87363,187.29163 108.64005,180.847 110.40625,174.1875 112.28284,167.528 113.99364,160.97593 115.53906,154.53125 Z M 209.0918,154.69336 H 223.66406 C 231.06004,154.69336 236.57791,155.82054 240.2207,158.07617 243.8635,160.33181 245.68555,164.09037 245.68555,169.35352 245.68555,174.07962 243.91913,177.89286 240.38672,180.79297 236.85431,183.58566 231.22519,184.98242 223.49805,184.98242 H 209.0918 Z M 209.0918,202.54492 H 226.14648 C 234.53595,202.54492 240.88434,203.88698 245.18945,206.57227 249.60496,209.15013 251.8125,213.33846 251.8125,219.13867 251.8125,225.36853 249.60496,229.98858 245.18945,232.99609 240.88434,235.8962 234.53595,237.3457 226.14648,237.3457 H 209.0918 Z"
+           transform="scale(0.98642638,1.0137604)" />
+      </g>
+      <rect
+         x="1089.326"
+         y="142.85909"
+         width="32.460201"
+         height="180.68742"
+         rx="15.873077"
+         fill="#2563eb"
+         id="rect10"
+         ry="16.321777"
+         style="fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:1.14981;stroke-miterlimit:4;stroke-dasharray:none" />
+      <circle
+         style="fill:#2ac53f;fill-opacity:1;stroke:none;stroke-width:45.9927;stroke-linecap:round;stroke-linejoin:round;paint-order:fill markers stroke"
+         id="path13744"
+         cx="983.59778"
+         cy="412.81473"
+         r="100" />
+      <path
+         style="fill:none;stroke:#ffffff;stroke-width:34.4945;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="M 921.0397,410.90737 981.3761,455.38526 C 1005.0542,421.30137 1046.7192,366.74419 1046.7192,366.74419"
+         id="path13349"
+         sodipodi:nodetypes="ccc" />
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="text"
+     style="display:inline"
+     sodipodi:insensitive="true">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:93.1211px;line-height:1.25;font-family:sans-serif;letter-spacing:-4.08px;word-spacing:0px;fill:url(#linearGradient37140);fill-opacity:1;stroke:none;stroke-width:1"
+       x="28.388447"
+       y="212.65732"
+       id="text5873"><tspan
+         sodipodi:role="line"
+         id="tspan5871"
+         x="28.388447"
+         y="212.65732"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:93.1211px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:url(#linearGradient37140);fill-opacity:1;stroke-width:1">Te<tspan
+   style="letter-spacing:-1.69px;fill:url(#linearGradient37140)"
+   id="tspan71724">x</tspan>t<tspan
+   style="letter-spacing:-5.38px;fill:url(#linearGradient37140)"
+   id="tspan73262">InputGuard</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:73.3237px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#f2f2f2;fill-opacity:1;stroke:none;stroke-width:0.999998"
+       x="31.502045"
+       y="304.56128"
+       id="text5873-7"><tspan
+         sodipodi:role="line"
+         id="tspan5871-6"
+         x="31.502045"
+         y="304.56128"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#f2f2f2;stroke-width:0.999998"
+         dy="10">日本語向け</tspan><tspan
+         sodipodi:role="line"
+         x="31.502045"
+         y="403.0108"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:73.3237px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Bold';fill:#f2f2f2;stroke-width:0.999998"
+         id="tspan34768">入力制御ライブラリ</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:34.645px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline;fill:#cccccc;fill-opacity:1;stroke:none;stroke-width:1"
+       x="33.515869"
+       y="478.39584"
+       id="text5873-7-0"><tspan
+         sodipodi:role="line"
+         x="33.515869"
+         y="478.39584"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:34.645px;font-family:'Noto Sans JP';-inkscape-font-specification:'Noto Sans JP Medium';fill:#cccccc;stroke-width:1"
+         id="tspan54086">IME入力でも安定したフォーム入力を実現</tspan></text>
+  </g>
+</svg>

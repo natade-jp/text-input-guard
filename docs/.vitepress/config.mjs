@@ -3,6 +3,7 @@ export default {
 	title: "TextInputGuard",
 	description: "Input guard for text inputs",
 	head: [
+		["meta", { property: "og:image", content: "https://natade-jp.github.io/text-input-guard/ogp.jpg" }],
 		["meta", { property: "og:type", content: "website" }],
 		["meta", { property: "og:title", content: "TextInputGuard" }],
 		["meta", { property: "og:description", content: "IME入力でも安定したフォーム入力を実現する日本語向け入力制御ライブラリ" }]
