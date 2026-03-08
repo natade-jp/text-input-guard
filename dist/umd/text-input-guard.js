@@ -711,6 +711,12 @@
 			this.pendingCompositionCommit = false;
 
 			/**
+			 * selection 更新のフレーム予約ID
+			 * @type {number|null}
+			 */
+			this.selectionFrameId = null;
+
+			/**
 			 * 直前に受理した表示値、正しい情報のスナップショットのような情報（block時の戻し先）
 			 * @type {string}
 			 */
@@ -1316,12 +1322,39 @@
 		 * @returns {void}
 		 */
 		onSelectionChange() {
-			requestAnimationFrame(() => {
-				// IME変換中は無視（この間はキャレット位置が不安定になることがあるため）
+			const requestFrame =
+				typeof requestAnimationFrame === "function"
+					? requestAnimationFrame
+					: (
+						/** @param {FrameRequestCallback} cb */
+						(cb) => setTimeout(cb, 0)
+					);
+
+			const cancelFrame =
+				typeof cancelAnimationFrame === "function"
+					? cancelAnimationFrame
+					: clearTimeout;
+
+			// すでに予約済みならキャンセル（selectionchange は連続発火するため）
+			if (this.selectionFrameId != null) {
+				cancelFrame(this.selectionFrameId);
+			}
+
+			this.selectionFrameId = requestFrame(() => {
+				this.selectionFrameId = null;
+
+				// IME変換中は無視（キャレット位置が不安定になるため）
 				if (this.composing) {
 					return;
 				}
+
 				const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+
+				// 要素がフォーカスされていない場合は無視
+				if (document.activeElement !== el) {
+					return;
+				}
+
 				this.lastAcceptedSelection = this.readSelection(el);
 			});
 		}
@@ -7408,11 +7441,11 @@
 
 	/**
 	 * バージョン（ビルド時に置換したいならここを差し替える）
-	 * 例: rollup replace で ""0.2.1"" を package.json の version に置換
+	 * 例: rollup replace で ""0.2.2"" を package.json の version に置換
 	 */
 	// @ts-ignore
 	// eslint-disable-next-line no-undef
-	const version = "0.2.1" ;
+	const version = "0.2.2" ;
 
 	exports.ascii = ascii;
 	exports.attach = attach;
