@@ -5,11 +5,9 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
-		rules.ascii({
-			case: "upper"
-		}),
+		rules.imeOff(),
 		rules.length({
-			max: 5,
+			max: 20,
 			mode: "block",
 			unit: "grapheme"
 		}),

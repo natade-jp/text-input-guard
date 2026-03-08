@@ -459,15 +459,41 @@
 	}
 
 	/**
+	 * input / textarea 要素と内部 Guard インスタンスの対応表
+	 *
+	 * - key: displayElement
+	 * - value: InputGuard（内部実装）
+	 *
+	 * @type {WeakMap<HTMLInputElement|HTMLTextAreaElement, InputGuard>}
+	 */
+	const guardMap = new WeakMap();
+
+	document.addEventListener("selectionchange", () => {
+		const el = document.activeElement;
+		if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+			return;
+		}
+		const inputGuard = guardMap.get(el);
+		if (!inputGuard) {
+			return;
+		}
+		console.log("selectionchange");
+		inputGuard.onSelectionChange();
+	});
+
+	/**
 	 * 指定した1要素に対してガードを適用し、Guard API を返す
 	 * @param {HTMLInputElement|HTMLTextAreaElement} element
 	 * @param {AttachOptions} [options]
 	 * @returns {Guard}
 	 */
 	function attach(element, options = {}) {
-		const guard = new InputGuard(element, options);
-		guard.init();
-		return guard.getGuard();
+		const inputGuard = new InputGuard(element, options);
+		inputGuard.init();
+		const guard = inputGuard.getGuard();
+		const display = guard.getDisplayElement();
+		guardMap.set(display, inputGuard);
+		return guard;
 	}
 
 	/**
@@ -563,7 +589,7 @@
 			/**
 			 * ユーザーが直接入力する表示側要素
 			 * swapしない場合は originalElement と同一
-			 * @type {HTMLElement}
+			 * @type {HTMLInputElement|HTMLTextAreaElement}
 			 */
 			this.displayElement = element;
 
@@ -730,9 +756,11 @@
 		 * @returns {SelectionState}
 		 */
 		readSelection(el) {
+			const start = el.selectionStart ?? 0;
+			const end = el.selectionEnd ?? start;
 			return {
-				start: el.selectionStart,
-				end: el.selectionEnd,
+				start,
+				end,
 				direction: el.selectionDirection
 			};
 		}
@@ -846,6 +874,8 @@
 		 * @returns {void}
 		 */
 		detach() {
+			// 管理マップから削除
+			guardMap.delete(this.displayElement);
 			// イベント解除（displayElementがswap後の可能性があるので先に外す）
 			this.unbindEvents();
 			// swap復元
@@ -909,12 +939,6 @@
 
 			// フォーカスで編集用に戻す
 			this.displayElement.addEventListener("focus", this.onFocus);
-
-			// キャレット/選択範囲の変化を拾う（block時の不自然ジャンプ対策）
-			this.displayElement.addEventListener("keyup", this.onSelectionChange);
-			this.displayElement.addEventListener("mouseup", this.onSelectionChange);
-			this.displayElement.addEventListener("select", this.onSelectionChange);
-			this.displayElement.addEventListener("focus", this.onSelectionChange);
 		}
 
 		/**
@@ -928,10 +952,6 @@
 			this.displayElement.removeEventListener("beforeinput", this.onBeforeInput);
 			this.displayElement.removeEventListener("blur", this.onBlur);
 			this.displayElement.removeEventListener("focus", this.onFocus);
-			this.displayElement.removeEventListener("keyup", this.onSelectionChange);
-			this.displayElement.removeEventListener("mouseup", this.onSelectionChange);
-			this.displayElement.removeEventListener("select", this.onSelectionChange);
-			this.displayElement.removeEventListener("focus", this.onSelectionChange);
 		}
 
 		/**
@@ -1299,12 +1319,14 @@
 		 * @returns {void}
 		 */
 		onSelectionChange() {
-			// IME変換中は無視（この間はキャレット位置が不安定になることがあるため）
-			if (this.composing) {
-				return;
-			}
-			const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-			this.lastAcceptedSelection = this.readSelection(el);
+			requestAnimationFrame(() => {
+				// IME変換中は無視（この間はキャレット位置が不安定になることがあるため）
+				if (this.composing) {
+					return;
+				}
+				const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+				this.lastAcceptedSelection = this.readSelection(el);
+			});
 		}
 
 		/**
