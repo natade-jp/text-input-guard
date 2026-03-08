@@ -5,13 +5,13 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
-		rules.imeOff(),
-		rules.length({
-			max: 20,
-			mode: "block",
-			unit: "grapheme"
+		rules.kana({
+			target: "katakana-full"
 		}),
-		rules.trim()
+		rules.filter({
+			category: ["katakana-full"],
+			allow: /[ ]/
+		})
 	]
 });
 guard.setValue("123");

@@ -37,7 +37,6 @@ const guard = attach(input, {
 		rules.kana({
 			target: "katakana-full"
 		}),
-		rules.ascii(),
 		rules.filter({
 			category: ["katakana-full"],
 			allow: /[ ]/
