@@ -1,7 +1,10 @@
 export default {
 	base: "/text-input-guard/",
 	title: "TextInputGuard",
-	description: "Input guard for text inputs",
+	description: "IME入力でも安定したフォーム入力を実現する日本語向け入力制御ライブラリ",
+	sitemap: {
+		hostname: "https://natade-jp.github.io"
+	},
 	head: [
 		["meta", { property: "og:image", content: "https://natade-jp.github.io/text-input-guard/ogp.jpg" }],
 		["meta", { property: "og:type", content: "website" }],
