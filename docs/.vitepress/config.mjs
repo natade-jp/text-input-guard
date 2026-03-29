@@ -6,6 +6,7 @@ export default {
 		hostname: "https://natade-jp.github.io"
 	},
 	head: [
+		["meta", { name: "google-site-verification", content: "ksPQkQSREAQ21SYqaCRWRwwRfjrk-vdkLOwBDTDhCpA" }],
 		["meta", { property: "og:url", content: "https://natade-jp.github.io/text-input-guard/" }],
 		["meta", { property: "og:image", content: "https://natade-jp.github.io/text-input-guard/ogp.jpg" }],
 		["meta", { property: "og:type", content: "website" }],
