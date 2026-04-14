@@ -7441,11 +7441,11 @@
 
 	/**
 	 * バージョン（ビルド時に置換したいならここを差し替える）
-	 * 例: rollup replace で ""0.2.2"" を package.json の version に置換
+	 * 例: rollup replace で ""1.0.0"" を package.json の version に置換
 	 */
 	// @ts-ignore
 	// eslint-disable-next-line no-undef
-	const version = "0.2.2" ;
+	const version = "1.0.0" ;
 
 	exports.ascii = ascii;
 	exports.attach = attach;
