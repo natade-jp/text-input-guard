@@ -3,6 +3,8 @@ import { attach, rules } from "../../src/main.js";
 const input = document.getElementById("input");
 const output = document.getElementById("output");
 
+// input.value = "あいうえお";
+
 const guard = attach(input, {
 	rules: [
 		rules.kana({
@@ -11,10 +13,13 @@ const guard = attach(input, {
 		rules.filter({
 			category: ["katakana-full"],
 			allow: /[ ]/
-		})
+		}),
+		rules.prefix({ text: "[" }),
+		rules.suffix({ text: "]" })
 	]
 });
-guard.setValue("123");
+
+// guard.setValue("123");
 const el = guard.getDisplayElement();
 
 function renderState() {

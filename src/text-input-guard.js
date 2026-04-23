@@ -986,7 +986,13 @@ class InputGuard {
 		// console.log("[text-input-guard] input");
 		// compositionend後に input が来た場合、フォールバックを無効化
 		this.pendingCompositionCommit = false;
-		this.evaluateInput();
+		try {
+			this.evaluateInput();
+		} finally {
+			// beforeinput が来ない入力経路（autocomplete等）で
+			// 古い snapshot を使い回さないよう、1イベントごとに破棄する
+			this.beforeInputSnapshot = null;
+		}
 	}
 
 	/**
@@ -1145,10 +1151,11 @@ class InputGuard {
 		const ctx = this.createCtx();
 		ctx.afterText = current;
 
-		// beforeinput が取得できない経路（初回評価）では
-		// 差分再構成を行うと lastAcceptedValue 基準で値を落とす可能性があるため、
-		// 現在の全文を正規化して扱うフォールバックへ切り替える。
-		if (!this.beforeInputSnapshot) {
+		/**
+		 * 入力値情報のみを使用するフォールバック
+		 * @returns {GuardContext}
+		 */
+		const applyFullNormalizeFromCurrent = () => {
 			let newText = current;
 			ctx.beforeText = "";
 			newText = this.runNormalizeChar(newText, ctx);
@@ -1156,6 +1163,31 @@ class InputGuard {
 			this.setDisplayValuePreserveCaret(display, newText, ctx);
 			ctx.afterText = newText;
 			return ctx;
+		};
+
+		// beforeinput が取得できない経路（初回評価）では
+		// 差分再構成を行うと lastAcceptedValue 基準で値を落とす可能性があるため、
+		// 現在の全文を正規化して扱うフォールバックへ切り替える。
+		if (!this.beforeInputSnapshot) {
+			return applyFullNormalizeFromCurrent();
+		}
+
+		// オートコンプリート等では beforeinput は来ても data が空のことがあり、
+		// 差分情報だけでは再構成不能になる。表示値がすでに変わっている場合は
+		// 再構成を諦めて current 全体の正規化に切り替える。
+		const isDeleteInput =
+			ctx.inputType === "deleteContentBackward" ||
+			ctx.inputType === "deleteContentForward";
+		const isInsertLikeInput =
+			ctx.inputType === "" ||
+			ctx.inputType?.startsWith("insert");
+		const lacksDelta =
+			ctx.insertedText === "" &&
+			ctx.beforeText !== current &&
+			isInsertLikeInput &&
+			!isDeleteInput;
+		if (lacksDelta) {
+			return applyFullNormalizeFromCurrent();
 		}
 
 		// 元のテキスト
