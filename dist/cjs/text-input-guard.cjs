@@ -114,11 +114,16 @@ class SwapState {
 
 		const UI_ATTRS = [
 			"placeholder",
+			"list",
 			"inputmode",
 			"autocomplete",
+			"autocapitalize",
+			"autocorrect",
 			"minlength",
 			"maxlength",
+			"size",
 			"pattern",
+			"dir",
 			"title",
 			"tabindex",
 			"style",
@@ -150,6 +155,7 @@ class SwapState {
 
 		for (const [k, v] of Object.entries(input.dataset)) {
 			if (k.startsWith("tig")) { continue; }
+			if (v == null) { continue; }
 			this.originalDataset[k] = v;
 		}
 	}
@@ -570,7 +576,7 @@ class InputGuard {
 
 		/**
 		 * attach時に登録されたバリデーション結果コールバック
-		 * @type {(result: ValidateResult) => void | undefined}
+		 * @type {((result: ValidateResult) => void) | undefined}
 		 */
 		this.onValidate = options.onValidate;
 
@@ -748,7 +754,7 @@ class InputGuard {
 		this.applySeparateValue();
 		this.bindEvents();
 		// 初期値を評価
-		this.evaluateInput();
+		this.evaluateCommit();
 	}
 
 	/**
@@ -1040,10 +1046,10 @@ class InputGuard {
 			if (inputType === "deleteContentBackward") {
 				// Backspace: キャレットの左側1文字を削除
 				replaceStart = Math.max(0, replaceStart - 1);
-				replaceEnd = snapSel.start ?? replaceEnd;
+				replaceEnd = snapSel?.start ?? replaceEnd;
 			} else if (inputType === "deleteContentForward") {
 				// Delete: キャレットの右側1文字を削除
-				replaceStart = snapSel.start ?? replaceStart;
+				replaceStart = snapSel?.start ?? replaceStart;
 				replaceEnd = Math.min(beforeText.length, replaceEnd + 1);
 			}
 			// 追加で拾うならここ：
@@ -1250,16 +1256,25 @@ class InputGuard {
 		// console.log("[text-input-guard] input");
 		// compositionend後に input が来た場合、フォールバックを無効化
 		this.pendingCompositionCommit = false;
-		this.evaluateInput();
+		try {
+			this.evaluateInput();
+		} finally {
+			// beforeinput が来ない入力経路（autocomplete等）で
+			// 古い snapshot を使い回さないよう、1イベントごとに破棄する
+			this.beforeInputSnapshot = null;
+		}
 	}
 
 	/**
 	 * beforeinput：入力が反映される直前に呼ばれる
 	 * - ここでの value/selection が「今回の編集の基準点」になる
-	 * @param {InputEvent} e
+	 * @param {Event} e
 	 * @returns {void}
 	 */
 	onBeforeInput(e) {
+		if (!(e instanceof InputEvent)) {
+			return;
+		}
 		const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
 		// 現時点（反映前）の選択範囲
 		const selection = this.readSelection(el);
@@ -1405,6 +1420,45 @@ class InputGuard {
 		const current = display.value;
 		const ctx = this.createCtx();
 		ctx.afterText = current;
+
+		/**
+		 * 入力値情報のみを使用するフォールバック
+		 * @returns {GuardContext}
+		 */
+		const applyFullNormalizeFromCurrent = () => {
+			let newText = current;
+			ctx.beforeText = "";
+			newText = this.runNormalizeChar(newText, ctx);
+			newText = this.runNormalizeStructure(newText, ctx);
+			this.setDisplayValuePreserveCaret(display, newText, ctx);
+			ctx.afterText = newText;
+			return ctx;
+		};
+
+		// beforeinput が取得できない経路（初回評価）では
+		// 差分再構成を行うと lastAcceptedValue 基準で値を落とす可能性があるため、
+		// 現在の全文を正規化して扱うフォールバックへ切り替える。
+		if (!this.beforeInputSnapshot) {
+			return applyFullNormalizeFromCurrent();
+		}
+
+		// オートコンプリート等では beforeinput は来ても data が空のことがあり、
+		// 差分情報だけでは再構成不能になる。表示値がすでに変わっている場合は
+		// 再構成を諦めて current 全体の正規化に切り替える。
+		const isDeleteInput =
+			ctx.inputType === "deleteContentBackward" ||
+			ctx.inputType === "deleteContentForward";
+		const isInsertLikeInput =
+			ctx.inputType === "" ||
+			ctx.inputType?.startsWith("insert");
+		const lacksDelta =
+			ctx.insertedText === "" &&
+			ctx.beforeText !== current &&
+			isInsertLikeInput &&
+			!isDeleteInput;
+		if (lacksDelta) {
+			return applyFullNormalizeFromCurrent();
+		}
 
 		// 元のテキスト
 		const beforeText = ctx.beforeText;
@@ -7437,11 +7491,11 @@ const rules = {
 
 /**
  * バージョン（ビルド時に置換したいならここを差し替える）
- * 例: rollup replace で ""1.0.0"" を package.json の version に置換
+ * 例: rollup replace で ""1.0.1"" を package.json の version に置換
  */
 // @ts-ignore
 // eslint-disable-next-line no-undef
-const version = "1.0.0" ;
+const version = "1.0.1" ;
 
 exports.ascii = ascii;
 exports.attach = attach;
