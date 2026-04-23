@@ -304,7 +304,7 @@ class InputGuard {
 
 		/**
 		 * attach時に登録されたバリデーション結果コールバック
-		 * @type {(result: ValidateResult) => void | undefined}
+		 * @type {((result: ValidateResult) => void) | undefined}
 		 */
 		this.onValidate = options.onValidate;
 
@@ -992,10 +992,13 @@ class InputGuard {
 	/**
 	 * beforeinput：入力が反映される直前に呼ばれる
 	 * - ここでの value/selection が「今回の編集の基準点」になる
-	 * @param {InputEvent} e
+	 * @param {Event} e
 	 * @returns {void}
 	 */
 	onBeforeInput(e) {
+		if (!(e instanceof InputEvent)) {
+			return;
+		}
 		const el = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
 		// 現時点（反映前）の選択範囲
 		const selection = this.readSelection(el);
