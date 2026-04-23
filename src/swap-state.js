@@ -112,11 +112,16 @@ export class SwapState {
 
 		const UI_ATTRS = [
 			"placeholder",
+			"list",
 			"inputmode",
 			"autocomplete",
+			"autocapitalize",
+			"autocorrect",
 			"minlength",
 			"maxlength",
+			"size",
 			"pattern",
+			"dir",
 			"title",
 			"tabindex",
 			"style",
@@ -148,6 +153,7 @@ export class SwapState {
 
 		for (const [k, v] of Object.entries(input.dataset)) {
 			if (k.startsWith("tig")) { continue; }
+			if (v == null) { continue; }
 			this.originalDataset[k] = v;
 		}
 	}
