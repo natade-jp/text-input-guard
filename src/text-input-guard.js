@@ -482,7 +482,7 @@ class InputGuard {
 		this.applySeparateValue();
 		this.bindEvents();
 		// 初期値を評価
-		this.evaluateInput();
+		this.evaluateCommit();
 	}
 
 	/**
@@ -776,10 +776,10 @@ class InputGuard {
 			if (inputType === "deleteContentBackward") {
 				// Backspace: キャレットの左側1文字を削除
 				replaceStart = Math.max(0, replaceStart - 1);
-				replaceEnd = snapSel.start ?? replaceEnd;
+				replaceEnd = snapSel?.start ?? replaceEnd;
 			} else if (inputType === "deleteContentForward") {
 				// Delete: キャレットの右側1文字を削除
-				replaceStart = snapSel.start ?? replaceStart;
+				replaceStart = snapSel?.start ?? replaceStart;
 				replaceEnd = Math.min(beforeText.length, replaceEnd + 1);
 			}
 			// 追加で拾うならここ：
@@ -1144,6 +1144,19 @@ class InputGuard {
 		const current = display.value;
 		const ctx = this.createCtx();
 		ctx.afterText = current;
+
+		// beforeinput が取得できない経路（初回評価）では
+		// 差分再構成を行うと lastAcceptedValue 基準で値を落とす可能性があるため、
+		// 現在の全文を正規化して扱うフォールバックへ切り替える。
+		if (!this.beforeInputSnapshot) {
+			let newText = current;
+			ctx.beforeText = "";
+			newText = this.runNormalizeChar(newText, ctx);
+			newText = this.runNormalizeStructure(newText, ctx);
+			this.setDisplayValuePreserveCaret(display, newText, ctx);
+			ctx.afterText = newText;
+			return ctx;
+		}
 
 		// 元のテキスト
 		const beforeText = ctx.beforeText;
