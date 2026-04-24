@@ -7,6 +7,7 @@ const output = document.getElementById("output");
 
 const guard = attach(input, {
 	rules: [
+		/*
 		rules.kana({
 			target: "katakana-full"
 		}),
@@ -14,8 +15,16 @@ const guard = attach(input, {
 			category: ["katakana-full"],
 			allow: /[ ]/
 		}),
+		*/
+		rules.length({
+			max: 4,
+			mode: "block",
+			unit: "grapheme"
+		})
+		/*
 		rules.prefix({ text: "[" }),
 		rules.suffix({ text: "]" })
+		*/
 	]
 });
 

@@ -466,6 +466,11 @@ class InputGuard {
 		this.beforeInputSnapshot = null;
 
 		/**
+		 * onBeforeInput イベントが発生したか否か
+		 */
+		this.existBeforeInputEvent = false;
+
+		/**
 		 * ルールからのrevert要求
 		 * @type {RevertRequest|null}
 		 */
@@ -723,12 +728,12 @@ class InputGuard {
 	 */
 	createCtx({ useSnapshot = true } = {}) {
 		const snap = useSnapshot ? this.beforeInputSnapshot : null;
-		const inputType = snap?.inputType ?? "";
-		const insertedText = snap?.insertedText ?? "";
+		let inputType = snap?.inputType ?? "";
+		let insertedText = snap?.insertedText ?? "";
 
 		// 受理済み（正規化済み）の全文を「今回の編集の基準」として使う
 		// display.value はブラウザ側の編集結果が混ざるので、差分再構成の基準にはしない
-		const beforeText = this.lastAcceptedValue ?? "";
+		let beforeText = this.lastAcceptedValue ?? "";
 
 		// selection は2系統ある：
 		// - snapSel: beforeinput 時点で取得した selection（今回の編集の基準点になり得る）
@@ -763,6 +768,38 @@ class InputGuard {
 		if (isCompositionInput || looksLikeImeRange) {
 			baseSel = lastSel;
 		}
+
+		// beforeinput がない環境では、差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
+		if (beforeText.length === 0 || !this.existBeforeInputEvent) {
+			const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
+			const current = display.value;
+			// 前回の値がとれないものの、何かしら入力情報がある状態
+			if (current.length > 0) {
+				// 文字列の先頭が前回の受理値と同じなら、末尾に何かしら入力されたと考えられる（オートコンプリート等）
+				if (current.toLocaleLowerCase().startsWith(beforeText.toLocaleLowerCase())) {
+					if (!current.startsWith(beforeText)) {
+						// 文字は同じだが、大文字と小文字の情報が替わっているなどのパターン
+						// 差し代わりが起きているため、前回値は基準にならないと判断して、差分全体を insertedText とする
+						beforeText = "";
+						insertedText = current;
+					} else {
+						// 末尾に追加されたと考えられる部分を insertedText とする
+						// 例: beforeText="abc" → current="abcde" なら、"de" が insertedText
+						insertedText = current.slice(beforeText.length);
+					}
+					// キャレットは前回値の末尾にあると推測する
+					baseSel = /** @type {SelectionState} */ {
+						start: beforeText.length,
+						end: beforeText.length,
+						direction: "none"
+					};
+					inputType = "insertText";
+				}
+			}
+		}
+		// existBeforeInputEvent は、少なくとも1回 beforeinput が発生したかどうかのフラグ
+		// これが false の場合、上記のような「beforeinputがない環境での推測ロジック」を走らせる。
+		this.existBeforeInputEvent = false;
 
 		let replaceStart = baseSel.start ?? 0;
 		let replaceEnd = baseSel.end ?? 0;
@@ -989,9 +1026,7 @@ class InputGuard {
 		try {
 			this.evaluateInput();
 		} finally {
-			// beforeinput が来ない入力経路（autocomplete等）で
-			// 古い snapshot を使い回さないよう、1イベントごとに破棄する
-			this.beforeInputSnapshot = null;
+			this.existBeforeInputEvent = false;
 		}
 	}
 
@@ -1012,6 +1047,7 @@ class InputGuard {
 		const inputType = typeof e.inputType === "string" ? e.inputType : null;
 		/** @type {string|null} */
 		const insertedText = typeof e.data === "string" ? e.data : null;
+		this.existBeforeInputEvent = true;
 		this.beforeInputSnapshot = { selection, inputType, insertedText };
 	}
 
@@ -1150,45 +1186,6 @@ class InputGuard {
 		const current = display.value;
 		const ctx = this.createCtx();
 		ctx.afterText = current;
-
-		/**
-		 * 入力値情報のみを使用するフォールバック
-		 * @returns {GuardContext}
-		 */
-		const applyFullNormalizeFromCurrent = () => {
-			let newText = current;
-			ctx.beforeText = "";
-			newText = this.runNormalizeChar(newText, ctx);
-			newText = this.runNormalizeStructure(newText, ctx);
-			this.setDisplayValuePreserveCaret(display, newText, ctx);
-			ctx.afterText = newText;
-			return ctx;
-		};
-
-		// beforeinput が取得できない経路（初回評価）では
-		// 差分再構成を行うと lastAcceptedValue 基準で値を落とす可能性があるため、
-		// 現在の全文を正規化して扱うフォールバックへ切り替える。
-		if (!this.beforeInputSnapshot) {
-			return applyFullNormalizeFromCurrent();
-		}
-
-		// オートコンプリート等では beforeinput は来ても data が空のことがあり、
-		// 差分情報だけでは再構成不能になる。表示値がすでに変わっている場合は
-		// 再構成を諦めて current 全体の正規化に切り替える。
-		const isDeleteInput =
-			ctx.inputType === "deleteContentBackward" ||
-			ctx.inputType === "deleteContentForward";
-		const isInsertLikeInput =
-			ctx.inputType === "" ||
-			ctx.inputType?.startsWith("insert");
-		const lacksDelta =
-			ctx.insertedText === "" &&
-			ctx.beforeText !== current &&
-			isInsertLikeInput &&
-			!isDeleteInput;
-		if (lacksDelta) {
-			return applyFullNormalizeFromCurrent();
-		}
 
 		// 元のテキスト
 		const beforeText = ctx.beforeText;
