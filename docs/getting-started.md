@@ -113,6 +113,34 @@ const rawValue = guard.getRawValue(); // 送信用の値
 const displayValue = guard.getDisplayValue(); // 表示中の値
 ```
 
+## 6. UMD版で型情報を使う
+
+ESモジュール版では `import` により型情報が自動的に読み込まれますが、UMD版を使用する場合は読み込まれません。  
+UMD版を使用する場合は、`typeof import()` を使ってESモジュール版の型を参照できます。
+
+```html
+<script src="./dist/umd/text-input-guard.min.js"></script>
+<script src="./app.js"></script>
+```
+
+`app.js` 側で `// @ts-check` を使うことで、型情報を活用できます。
+
+```js
+// @ts-check
+
+/**
+ * UMDで公開された TextInputGuard に型を付ける
+ * @type {typeof import("./dist/esm/text-input-guard.js").TextInputGuard}
+ */
+const TextInputGuard = /** @type {any} */ (window).TextInputGuard;
+
+const input = document.getElementById("price");
+
+TextInputGuard.attach(input, {
+	rules: [TextInputGuard.rules.numeric()]
+});
+```
+
 ## 次に読む
 
 - 詳細なAPI仕様 → [API](/api)

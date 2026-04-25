@@ -81,3 +81,27 @@ export const rules = {
 // @ts-ignore
 // eslint-disable-next-line no-undef
 export const version = typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev";
+
+/**
+ * UMD公開時のグローバルオブジェクト
+ */
+export const TextInputGuard = {
+	attach,
+	attachAll,
+	autoAttach,
+	rules,
+	numeric,
+	digits,
+	comma,
+	imeOff,
+	kana,
+	ascii,
+	filter,
+	length,
+	width,
+	bytes,
+	prefix,
+	suffix,
+	trim,
+	version
+};

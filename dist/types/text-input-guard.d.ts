@@ -287,6 +287,10 @@ type AttachOptions = {
      * - 評価完了時の通知（input/commitごと）
      */
     onValidate?: (result: ValidateResult) => void;
+    /**
+     * - フォーカスが外れた値が変更されていた場合の通知
+     */
+    onChange?: (result: Guard) => void;
 };
 /**
  * revert要求（入力を巻き戻す指示）
@@ -317,7 +321,7 @@ type RevertRequest = {
  * - fix: 確定時（blur）に「-」「.」「-.」や末尾の「.」を空/削除にする
  *
  * @param {NumericRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function numeric(options?: NumericRuleOptions): Rule;
 declare namespace numeric {
@@ -335,7 +339,7 @@ declare namespace numeric {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -364,7 +368,7 @@ type NumericRuleOptions = {
 /**
  * digits ルールを生成する
  * @param {DigitsRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function digits(options?: DigitsRuleOptions): Rule;
 declare namespace digits {
@@ -386,7 +390,7 @@ declare namespace digits {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -440,7 +444,7 @@ type DigitsRuleOptions = {
 /**
  * カンマ付与ルール
  * - blur時のみ整数部に3桁区切りカンマを付与する
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function comma(): Rule;
 declare namespace comma {
@@ -453,7 +457,7 @@ declare namespace comma {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -465,7 +469,7 @@ declare namespace comma {
  * - これは「半角化」ではなく「IMEオフ入力相当への寄せ」
  * - ascii() とは責務が異なる
  *
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function imeOff(): Rule;
 declare namespace imeOff {
@@ -477,7 +481,7 @@ declare namespace imeOff {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -491,7 +495,7 @@ declare namespace imeOff {
 /**
  * kana ルールを生成する
  * @param {KanaRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function kana(options?: KanaRuleOptions): Rule;
 declare namespace kana {
@@ -507,7 +511,7 @@ declare namespace kana {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -536,7 +540,7 @@ type KanaRuleOptions = {
  * - 必要に応じて英字を大文字/小文字へ統一
  *
  * @param {AsciiRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function ascii(options?: AsciiRuleOptions): Rule;
 declare namespace ascii {
@@ -549,7 +553,7 @@ declare namespace ascii {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -566,7 +570,7 @@ type AsciiRuleOptions = {
 /**
  * filter ルールを生成する
  * @param {FilterRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function filter(options?: FilterRuleOptions): Rule;
 declare namespace filter {
@@ -585,7 +589,7 @@ declare namespace filter {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -643,7 +647,7 @@ type FilterCategory = "digits" | "alpha-upper" | "alpha-lower" | "ascii" | "hira
 /**
  * length ルールを生成する
  * @param {LengthRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function length(options?: LengthRuleOptions): Rule;
 declare namespace length {
@@ -660,7 +664,7 @@ declare namespace length {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -691,7 +695,7 @@ type LengthRuleOptions = {
 /**
  * width ルールを生成する
  * @param {WidthRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function width(options?: WidthRuleOptions): Rule;
 declare namespace width {
@@ -707,7 +711,7 @@ declare namespace width {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -728,7 +732,7 @@ type WidthRuleOptions = {
 /**
  * bytes ルールを生成する
  * @param {BytesRuleOptions} [options]
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function bytes(options?: BytesRuleOptions): Rule;
 declare namespace bytes {
@@ -742,10 +746,11 @@ declare namespace bytes {
      * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
      * - data-tig-rules-bytes-mode                -> dataset.tigRulesBytesMode
      * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
+     * - data-tig-rules-bytes-newline             -> dataset.tigRulesBytesNewline
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -754,7 +759,7 @@ declare namespace bytes {
  */
 type BytesRuleOptions = {
     /**
-     * - 最大長（グラフェム数）。未指定なら制限なし
+     * - バイト数。未指定なら制限なし
      */
     max?: number;
     /**
@@ -765,6 +770,10 @@ type BytesRuleOptions = {
      * - サイズの単位(sjis系を使用する場合はfilterも必須)
      */
     unit?: "utf-8" | "utf-16" | "utf-32" | "sjis" | "cp932";
+    /**
+     * - 改行の扱い(バイト数計算に影響あり)
+     */
+    newline?: "\n" | "\r" | "\r\n";
 };
 
 /**
@@ -788,7 +797,7 @@ type BytesRuleOptions = {
  * - 手動入力された同文字列は normalizeStructure で除去する
  *
  * @param {PrefixRuleOptions} options
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function prefix(options: PrefixRuleOptions): Rule;
 declare namespace prefix {
@@ -803,7 +812,7 @@ declare namespace prefix {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -842,7 +851,7 @@ type PrefixRuleOptions = {
  * - 手動入力された同文字列は normalizeStructure で除去する
  *
  * @param {SuffixRuleOptions} options
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function suffix(options: SuffixRuleOptions): Rule;
 declare namespace suffix {
@@ -857,7 +866,7 @@ declare namespace suffix {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -886,7 +895,7 @@ type SuffixRuleOptions = {
  */
 /**
  * トリムするルール
- * @returns {import("../text-input-guard.js").Rule}
+ * @returns {Rule}
  */
 declare function trim(): Rule;
 declare namespace trim {
@@ -899,7 +908,7 @@ declare namespace trim {
      *
      * @param {DOMStringMap} dataset
      * @param {HTMLInputElement|HTMLTextAreaElement} _el
-     * @returns {import("../text-input-guard.js").Rule|null}
+     * @returns {Rule|null}
      */
     function fromDataset(dataset: DOMStringMap, _el: HTMLInputElement | HTMLTextAreaElement): Rule | null;
 }
@@ -925,5 +934,25 @@ declare namespace rules {
  * 例: rollup replace で "__VERSION__" を package.json の version に置換
  */
 declare const version: any;
+declare namespace TextInputGuard {
+    export { attach };
+    export { attachAll };
+    export { autoAttach };
+    export { rules };
+    export { numeric };
+    export { digits };
+    export { comma };
+    export { imeOff };
+    export { kana };
+    export { ascii };
+    export { filter };
+    export { length };
+    export { width };
+    export { bytes };
+    export { prefix };
+    export { suffix };
+    export { trim };
+    export { version };
+}
 
-export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };
+export { TextInputGuard, ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };

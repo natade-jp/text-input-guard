@@ -413,6 +413,7 @@ class SwapState {
  * @property {string} [invalidClass="is-invalid"] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
  * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
+ * @property {(result: Guard) => void} [onChange] - フォーカスが外れた値が変更されていた場合の通知
  */
 
 /**
@@ -577,6 +578,18 @@ class InputGuard {
 		 * @type {((result: ValidateResult) => void) | undefined}
 		 */
 		this.onValidate = options.onValidate;
+
+		/**
+		 * blur時に値が変更されていた場合の通知
+		 * @type {((result: Guard) => void) | undefined}
+		 */
+		this.onChange = options.onChange;
+
+		/**
+		 * onChange 判定のための直前の値（blur時にこれと比較して変化を検知する）
+		 * @type {string}
+		 */
+		this.previousValue = "";
 
 		/**
 		 * 実際に送信を担う要素（swap時は hidden(raw) 側）
@@ -758,6 +771,8 @@ class InputGuard {
 		this.bindEvents();
 		// 初期値を評価
 		this.evaluateCommit();
+		// 初期値を記録
+		this.previousValue = this.getDisplayValue();
 	}
 
 	/**
@@ -991,10 +1006,48 @@ class InputGuard {
 	}
 
 	/**
+	 * 変更前後の文字列から置換範囲と挿入文字列を推測
+	 * @param {string} beforeText
+	 * @param {string} afterText
+	 * @returns {{ replaceStart: number, replaceEnd: number, insertedText: string }}
+	 */
+	detectTextDiff(beforeText, afterText) {
+		let start = 0;
+
+		while (
+			start < beforeText.length &&
+			start < afterText.length &&
+			beforeText[start] === afterText[start]
+		) {
+			start++;
+		}
+
+		let beforeEnd = beforeText.length;
+		let afterEnd = afterText.length;
+
+		while (
+			beforeEnd > start &&
+			afterEnd > start &&
+			beforeText[beforeEnd - 1] === afterText[afterEnd - 1]
+		) {
+			beforeEnd--;
+			afterEnd--;
+		}
+
+		return {
+			replaceStart: start,
+			replaceEnd: beforeEnd,
+			insertedText: afterText.slice(start, afterEnd)
+		};
+	}
+
+	/**
 	 * ルール実行に渡すコンテキストを作る（pushErrorで errors に積める）
 	 * @returns {GuardContext}
 	 */
 	createCtx({ useSnapshot = true } = {}) {
+		// 入力後のテキストを取得
+		const afterText = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement).value;
 		const snap = useSnapshot ? this.beforeInputSnapshot : null;
 		let inputType = snap?.inputType ?? "";
 		let insertedText = snap?.insertedText ?? "";
@@ -1037,23 +1090,23 @@ class InputGuard {
 			baseSel = lastSel;
 		}
 
-		// beforeinput がない環境では、差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
+		// オートコンプリートの処理
+		// inputType が取得できないため existBeforeInputEvent 情報で判断
+		// 差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
 		if (beforeText.length === 0 || !this.existBeforeInputEvent) {
-			const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-			const current = display.value;
 			// 前回の値がとれないものの、何かしら入力情報がある状態
-			if (current.length > 0) {
+			if (afterText.length > 0) {
 				// 文字列の先頭が前回の受理値と同じなら、末尾に何かしら入力されたと考えられる（オートコンプリート等）
-				if (current.toLocaleLowerCase().startsWith(beforeText.toLocaleLowerCase())) {
-					if (!current.startsWith(beforeText)) {
+				if (afterText.toLocaleLowerCase().startsWith(beforeText.toLocaleLowerCase())) {
+					if (!afterText.startsWith(beforeText)) {
 						// 文字は同じだが、大文字と小文字の情報が替わっているなどのパターン
 						// 差し代わりが起きているため、前回値は基準にならないと判断して、差分全体を insertedText とする
 						beforeText = "";
-						insertedText = current;
+						insertedText = afterText;
 					} else {
 						// 末尾に追加されたと考えられる部分を insertedText とする
-						// 例: beforeText="abc" → current="abcde" なら、"de" が insertedText
-						insertedText = current.slice(beforeText.length);
+						// 例: beforeText="abc" → afterText="abcde" なら、"de" が insertedText
+						insertedText = afterText.slice(beforeText.length);
 					}
 					// キャレットは前回値の末尾にあると推測する
 					baseSel = /** @type {SelectionState} */ {
@@ -1072,10 +1125,10 @@ class InputGuard {
 		let replaceStart = baseSel.start ?? 0;
 		let replaceEnd = baseSel.end ?? 0;
 
+		// 削除操作の特殊処理
 		// Backspace / Delete は「挿入文字がない（dataがnull）」ことが多い。
 		// そのままだと差分再構成で “何も変わらない” 扱いになって削除が効かなくなるため、
 		// 選択範囲が無い場合は「削除される1文字ぶん」の置換範囲をここで作る。
-		//
 		// ※ 選択範囲がある削除は replaceStart!=replaceEnd なので補正不要（その範囲を消すだけでよい）
 		if (replaceStart === replaceEnd) {
 			if (inputType === "deleteContentBackward") {
@@ -1091,6 +1144,14 @@ class InputGuard {
 			// deleteWordBackward / deleteWordForward / deleteByCut / deleteSoftLineBackward ... etc
 		}
 
+		// アンドゥリドゥの特殊処理
+		if (inputType === "historyUndo" || inputType === "historyRedo") {
+			const diff = this.detectTextDiff(beforeText, afterText);
+			replaceStart = diff.replaceStart;
+			replaceEnd = diff.replaceEnd;
+			insertedText = diff.insertedText;
+		}
+
 		return {
 			hostElement: this.hostElement,
 			displayElement: this.displayElement,
@@ -1104,7 +1165,7 @@ class InputGuard {
 			replaceStart,
 			replaceEnd,
 			insertedText,
-			afterText: null, // 後で代入する
+			afterText,
 			pushError: (e) => this.errors.push(e),
 			requestRevert: (req) => {
 				// 1回でもrevert要求が出たら採用（最初の理由を保持）
@@ -1314,7 +1375,10 @@ class InputGuard {
 		/** @type {string|null} */
 		const inputType = typeof e.inputType === "string" ? e.inputType : null;
 		/** @type {string|null} */
-		const insertedText = typeof e.data === "string" ? e.data : null;
+		let insertedText = typeof e.data === "string" ? e.data : null;
+		if (insertedText === null && (inputType === "insertLineBreak" || inputType === "insertParagraph")) {
+			insertedText = "\n";
+		}
 		this.existBeforeInputEvent = true;
 		this.beforeInputSnapshot = { selection, inputType, insertedText };
 	}
@@ -1326,6 +1390,12 @@ class InputGuard {
 	onBlur() {
 		// console.log("[text-input-guard] blur");
 		this.evaluateCommit();
+		if (this.previousValue !== this.getDisplayValue()) {
+			this.previousValue = this.getDisplayValue();
+			if (this.onChange) {
+				this.onChange(this.getGuard());
+			}
+		}
 	}
 
 	/**
@@ -1450,10 +1520,7 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtxAndNormalize() {
-		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-		const current = display.value;
 		const ctx = this.createCtx();
-		ctx.afterText = current;
 
 		// 元のテキスト
 		const beforeText = ctx.beforeText;
@@ -1465,7 +1532,7 @@ class InputGuard {
 		const replaceStart = ctx.replaceStart;
 
 		// 現状のテキスト
-		const tempText = current;
+		const tempText = ctx.afterText;
 
 		// 作成する全体のテキスト
 		let newText = beforeText;
@@ -1510,7 +1577,7 @@ class InputGuard {
 
 		// 画面を更新
 		this.syncDisplay(newText);
-		this.writeSelection(display, newSelection);
+		this.writeSelection(this.displayElement, newSelection);
 
 		// CTX の情報を最新の情報へ更新する
 		ctx.afterText = newText;
@@ -6975,9 +7042,10 @@ width.fromDataset = function fromDataset(dataset, _el) {
 /**
  * bytes ルールのオプション
  * @typedef {Object} BytesRuleOptions
- * @property {number} [max] - 最大長（グラフェム数）。未指定なら制限なし
+ * @property {number} [max] - バイト数。未指定なら制限なし
  * @property {"block"|"error"} [mode="block"] - 入力中に最大長を超えたときの挙動
  * @property {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} [unit="utf-8"] - サイズの単位(sjis系を使用する場合はfilterも必須)
+ * @property {"\n"|"\r"|"\r\n"} [newline="\n"] - 改行の扱い(バイト数計算に影響あり)
  */
 
 /**
@@ -6986,25 +7054,28 @@ width.fromDataset = function fromDataset(dataset, _el) {
  */
 
 /**
- * グラフェム/UTF-16コード単位/UTF-32コード単位の長さを調べる
+ * テキストのバイト数を調べる
  * @param {string} text
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {number}
  */
-const getTextBytesByUnit = function(text, unit) {
+const getTextBytesByUnit = function(text, unit, newline) {
 	if (text.length === 0) {
 		return 0;
 	}
+
+	const normalizedText = text.replace(/\r?\n/g, newline);
+
 	if (unit === "utf-8") {
-		return Mojix.toUTF8Array(text).length;
+		return Mojix.toUTF8Array(normalizedText).length;
 	} else if (unit === "utf-16") {
-		return Mojix.toUTF16Array(text).length * 2;
+		return Mojix.toUTF16Array(normalizedText).length * 2;
 	} else if (unit === "utf-32") {
-		return Mojix.toUTF32Array(text).length * 4;
+		return Mojix.toUTF32Array(normalizedText).length * 4;
 	} else if (unit === "sjis" || unit === "cp932") {
-		return Mojix.encode(text, "Shift_JIS").length;
+		return Mojix.encode(normalizedText, "Shift_JIS").length;
 	} else {
-		// ここには来ない
 		throw new Error(`Invalid unit: ${unit}`);
 	}
 };
@@ -7014,9 +7085,10 @@ const getTextBytesByUnit = function(text, unit) {
  * @param {string} text
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {string}
  */
-const cutTextByUnit = function(text, unit, max) {
+const cutTextByUnit = function(text, unit, max, newline) {
 	/**
 	 * グラフェムの配列
 	 * @type {Grapheme[]}
@@ -7035,19 +7107,10 @@ const cutTextByUnit = function(text, unit, max) {
 	const outputGraphemeArray = [];
 
 	for (let i = 0; i < graphemeArray.length; i++) {
-		const g = graphemeArray[i];
-
 		// 1グラフェムあたりの長さ
-		let byteCount = 0;
-		if (unit === "utf-8") {
-			byteCount = Mojix.toUTF8Array(Mojix.toStringFromMojiArray([g])).length;
-		} else if (unit === "utf-16") {
-			byteCount = Mojix.toUTF16Array(Mojix.toStringFromMojiArray([g])).length * 2;
-		} else if (unit === "utf-32") {
-			byteCount = Mojix.toUTF32Array(Mojix.toStringFromMojiArray([g])).length * 4;
-		} else if (unit === "sjis" || unit === "cp932") {
-			byteCount = Mojix.encode(Mojix.toStringFromMojiArray([g]), "Shift_JIS").length;
-		}
+		const g = graphemeArray[i];
+		const gText = Mojix.toStringFromMojiArray([g]);
+		const byteCount = getTextBytesByUnit(gText, unit, newline);
 
 		if (count + byteCount > max) {
 			// 空配列を渡すとNUL文字を返すため、空配列のときは空文字を返す
@@ -7072,15 +7135,16 @@ const cutTextByUnit = function(text, unit, max) {
  * @param {string} insertedText 追加するテキスト
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は insertedText をそのまま返す）
  */
-const cutBytes = function(beforeText, insertedText, unit, max) {
-	const beforeTextLen = getTextBytesByUnit(beforeText, unit);
+const cutBytes = function(beforeText, insertedText, unit, max, newline) {
+	const beforeTextLen = getTextBytesByUnit(beforeText, unit, newline);
 
 	// すでに最大長を超えている場合は追加のテキストを全て切る
 	if (beforeTextLen >= max) { return ""; }
 
-	const insertedTextLen = getTextBytesByUnit(insertedText, unit);
+	const insertedTextLen = getTextBytesByUnit(insertedText, unit, newline);
 	const totalLen = beforeTextLen + insertedTextLen;
 
 	if (totalLen <= max) {
@@ -7090,7 +7154,7 @@ const cutBytes = function(beforeText, insertedText, unit, max) {
 
 	// 超える場合は追加のテキストを切る
 	const allowedAddLen = max - beforeTextLen;
-	return cutTextByUnit(insertedText, unit, allowedAddLen);
+	return cutTextByUnit(insertedText, unit, allowedAddLen, newline);
 };
 
 /**
@@ -7099,12 +7163,10 @@ const cutBytes = function(beforeText, insertedText, unit, max) {
  * @returns {Rule}
  */
 function bytes(options = {}) {
-	/** @type {BytesRuleOptions} */
-	const opt = {
-		max: typeof options.max === "number" ? options.max : undefined,
-		mode: options.mode ?? "block",
-		unit: options.unit ?? "utf-8"
-	};
+	const max = typeof options.max === "number" ? options.max : undefined;
+	const mode = options.mode ?? "block";
+	const unit = options.unit ?? "utf-8";
+	const newline = options.newline ?? "\n";
 
 	return {
 		name: "bytes",
@@ -7112,35 +7174,35 @@ function bytes(options = {}) {
 
 		normalizeChar(value, ctx) {
 			// block 以外は何もしない
-			if (opt.mode !== "block") {
+			if (mode !== "block") {
 				return value;
 			}
 			// max 未指定なら制限なし
-			if (typeof opt.max !== "number") {
+			if (typeof max !== "number") {
 				return value;
 			}
 
-			const cutText = cutBytes(ctx.beforeText, value, opt.unit, opt.max);
+			const cutText = cutBytes(ctx.beforeText, value, unit, max, newline);
 			return cutText;
 		},
 
 		validate(value, ctx) {
 			// error 以外は何もしない
-			if (opt.mode !== "error") {
+			if (mode !== "error") {
 				return;
 			}
 			// max 未指定なら制限なし
-			if (typeof opt.max !== "number") {
+			if (typeof max !== "number") {
 				return;
 			}
 
-			const len = getTextBytesByUnit(value, opt.unit);
-			if (len > opt.max) {
+			const len = getTextBytesByUnit(value, unit, newline);
+			if (len > max) {
 				ctx.pushError({
 					code: "bytes.max_overflow",
 					rule: "bytes",
 					phase: "validate",
-					detail: { limit: opt.max, actual: len }
+					detail: { limit: max, actual: len }
 				});
 			}
 		}
@@ -7157,6 +7219,7 @@ function bytes(options = {}) {
  * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
  * - data-tig-rules-bytes-mode                -> dataset.tigRulesBytesMode
  * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
+ * - data-tig-rules-bytes-newline             -> dataset.tigRulesBytesNewline
  *
  * @param {DOMStringMap} dataset
  * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -7187,6 +7250,14 @@ bytes.fromDataset = function fromDataset(dataset, _el) {
 	);
 	if (unit != null) {
 		options.unit = unit;
+	}
+
+	const newline = parseDatasetEnum(
+		dataset.tigRulesBytesNewline,
+		["\n", "\r", "\r\n"]
+	);
+	if (newline != null) {
+		options.newline = newline;
 	}
 
 	return bytes(options);
@@ -7486,10 +7557,34 @@ const rules = {
 
 /**
  * バージョン（ビルド時に置換したいならここを差し替える）
- * 例: rollup replace で ""1.0.2"" を package.json の version に置換
+ * 例: rollup replace で ""1.1.0"" を package.json の version に置換
  */
 // @ts-ignore
 // eslint-disable-next-line no-undef
-const version = "1.0.2" ;
+const version = "1.1.0" ;
 
-export { ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };
+/**
+ * UMD公開時のグローバルオブジェクト
+ */
+const TextInputGuard = {
+	attach,
+	attachAll,
+	autoAttach,
+	rules,
+	numeric,
+	digits,
+	comma,
+	imeOff,
+	kana,
+	ascii,
+	filter,
+	length,
+	width,
+	bytes,
+	prefix,
+	suffix,
+	trim,
+	version
+};
+
+export { TextInputGuard, ascii, attach, attachAll, autoAttach, bytes, comma, digits, filter, imeOff, kana, length, numeric, prefix, rules, suffix, trim, version, width };

@@ -173,7 +173,8 @@ data.push({
 		file: `./dist/types/${packageName}.d.ts`,
 		format: "es"
 	},
-	plugins: [dts()]
+	plugins: [dts(),
+		jsdocImportToLocalType()]
 });
 
 export default data;
