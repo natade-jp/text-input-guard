@@ -11,7 +11,7 @@ const guard = attach(input, {
 			target: "katakana-full"
 		}),
 		rules.filter({
-			category: ["katakana-full"],
+			category: ["katakana-full", "ascii"],
 			allow: /[ \r\n]/
 		}),
 		rules.length({

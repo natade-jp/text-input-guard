@@ -738,6 +738,42 @@ class InputGuard {
 	}
 
 	/**
+	 * 変更前後の文字列から置換範囲と挿入文字列を推測
+	 * @param {string} beforeText
+	 * @param {string} afterText
+	 * @returns {{ replaceStart: number, replaceEnd: number, insertedText: string }}
+	 */
+	detectTextDiff(beforeText, afterText) {
+		let start = 0;
+
+		while (
+			start < beforeText.length &&
+			start < afterText.length &&
+			beforeText[start] === afterText[start]
+		) {
+			start++;
+		}
+
+		let beforeEnd = beforeText.length;
+		let afterEnd = afterText.length;
+
+		while (
+			beforeEnd > start &&
+			afterEnd > start &&
+			beforeText[beforeEnd - 1] === afterText[afterEnd - 1]
+		) {
+			beforeEnd--;
+			afterEnd--;
+		}
+
+		return {
+			replaceStart: start,
+			replaceEnd: beforeEnd,
+			insertedText: afterText.slice(start, afterEnd)
+		};
+	}
+
+	/**
 	 * ルール実行に渡すコンテキストを作る（pushErrorで errors に積める）
 	 * @returns {GuardContext}
 	 */
@@ -786,7 +822,9 @@ class InputGuard {
 			baseSel = lastSel;
 		}
 
-		// beforeinput がない環境では、差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
+		// オートコンプリートの処理
+		// inputType が取得できないため existBeforeInputEvent 情報で判断
+		// 差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
 		if (beforeText.length === 0 || !this.existBeforeInputEvent) {
 			// 前回の値がとれないものの、何かしら入力情報がある状態
 			if (afterText.length > 0) {
@@ -819,10 +857,10 @@ class InputGuard {
 		let replaceStart = baseSel.start ?? 0;
 		let replaceEnd = baseSel.end ?? 0;
 
+		// 削除操作の特殊処理
 		// Backspace / Delete は「挿入文字がない（dataがnull）」ことが多い。
 		// そのままだと差分再構成で “何も変わらない” 扱いになって削除が効かなくなるため、
 		// 選択範囲が無い場合は「削除される1文字ぶん」の置換範囲をここで作る。
-		//
 		// ※ 選択範囲がある削除は replaceStart!=replaceEnd なので補正不要（その範囲を消すだけでよい）
 		if (replaceStart === replaceEnd) {
 			if (inputType === "deleteContentBackward") {
@@ -836,6 +874,14 @@ class InputGuard {
 			}
 			// 追加で拾うならここ：
 			// deleteWordBackward / deleteWordForward / deleteByCut / deleteSoftLineBackward ... etc
+		}
+
+		// アンドゥリドゥの特殊処理
+		if (inputType === "historyUndo" || inputType === "historyRedo") {
+			const diff = this.detectTextDiff(beforeText, afterText);
+			replaceStart = diff.replaceStart;
+			replaceEnd = diff.replaceEnd;
+			insertedText = diff.insertedText;
 		}
 
 		return {
