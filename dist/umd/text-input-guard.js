@@ -1269,8 +1269,8 @@
 			// アンドゥリドゥの特殊処理
 			if (inputType === "historyUndo" || inputType === "historyRedo") {
 				let newText = null;
-				console.log(inputType);
-				console.log(this.history.toString());
+				// console.log(inputType);
+				// console.log(this.history.toString());
 				if (inputType === "historyUndo") {
 					newText = this.history.undo();
 				} else if (inputType === "historyRedo") {
@@ -7707,11 +7707,11 @@
 
 	/**
 	 * バージョン（ビルド時に置換したいならここを差し替える）
-	 * 例: rollup replace で ""1.2.0"" を package.json の version に置換
+	 * 例: rollup replace で ""1.2.1"" を package.json の version に置換
 	 */
 	// @ts-ignore
 	// eslint-disable-next-line no-undef
-	const version = "1.2.0" ;
+	const version = "1.2.1" ;
 
 	/**
 	 * UMD公開時のグローバルオブジェクト

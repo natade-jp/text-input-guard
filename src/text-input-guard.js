@@ -995,8 +995,8 @@ class InputGuard {
 		// アンドゥリドゥの特殊処理
 		if (inputType === "historyUndo" || inputType === "historyRedo") {
 			let newText = null;
-			console.log(inputType);
-			console.log(this.history.toString());
+			// console.log(inputType);
+			// console.log(this.history.toString());
 			if (inputType === "historyUndo") {
 				newText = this.history.undo();
 			} else if (inputType === "historyRedo") {
