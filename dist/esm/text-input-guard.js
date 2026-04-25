@@ -412,7 +412,9 @@ class SwapState {
  * @property {boolean} [warn] - 非対応ルールなどを console.warn するか
  * @property {string} [invalidClass="is-invalid"] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
+ * @property {number} [historySize = 50] - 記録する履歴の最大件数
  * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
+ * @property {(result: Guard) => void} [onInput] - 入力時に値が変更されていた場合の通知
  * @property {(result: Guard) => void} [onChange] - フォーカスが外れた値が変更されていた場合の通知
  */
 
@@ -524,6 +526,100 @@ function attachAll(elements, options = {}) {
 	};
 }
 
+/**
+ * UndoとRedoを実装用のキュー
+ */
+class HistoryQueue {
+	/**
+	 * 初期化する
+	 * @param {number} maxLength
+	 */
+	constructor(maxLength = 50) {
+		/**
+		 * キューの最大長（これ以上は古い履歴から削除される）
+		 */
+		this.maxLength = maxLength;
+
+		/**
+		 * @type {string[]} 履歴キュー（過去から未来の順で値が入る）
+		 */
+		this.queue = [];
+
+		/**
+		 * 現在の位置を示すインデックス（queue内のどこにいるか、-1は履歴なしを意味する）
+		 */
+		this.index = -1;
+	}
+
+	/**
+	 * 値を追加（新しい履歴）
+	 * @param {string} value
+	 */
+	push(value) {
+	// 現在位置の値と同じなら追加しない
+		if (this.queue[this.index] === value) {
+			return false;
+		}
+
+		// Undo後に新規入力した場合は、現在位置より後ろのRedo履歴を消す
+		if (this.index < this.queue.length - 1) {
+			this.queue = this.queue.slice(0, this.index + 1);
+		}
+
+		// 念のため、末尾と同じ値も追加しない
+		if (this.queue[this.queue.length - 1] === value) {
+			this.index = this.queue.length - 1;
+			return false;
+		}
+
+		this.queue.push(value);
+
+		// 最大長制限
+		if (this.queue.length > this.maxLength) {
+			this.queue.shift();
+		}
+
+		this.index = this.queue.length - 1;
+	}
+
+	/**
+	 * Undo（前の値）
+	 * @returns {string|null}
+	 */
+	undo() {
+		if (this.index <= 0) { return null; }
+		this.index--;
+		return this.queue[this.index];
+	}
+
+	/**
+	 * Redo（次の値）
+	 * @returns {string|null}
+	 */
+	redo() {
+		if (this.index >= this.queue.length - 1) { return null; }
+		this.index++;
+		return this.queue[this.index];
+	}
+
+	/**
+	 * 初期化して値をセット
+	 * @param {string} value
+	 */
+	reset(value) {
+		this.queue = [value];
+		this.index = 0;
+	}
+
+	/**
+	 * デバッグ用の文字列化
+	 * @returns {string}
+	 */
+	toString() {
+		return `HistoryQueue(index=${this.index}, queue=[${this.queue.join(" | ")}])`;
+	}
+}
+
 class InputGuard {
 	/**
 	 * InputGuard の内部状態を初期化する（DOM/設定/イベント/パイプラインを持つ）
@@ -577,19 +673,37 @@ class InputGuard {
 		 * attach時に登録されたバリデーション結果コールバック
 		 * @type {((result: ValidateResult) => void) | undefined}
 		 */
-		this.onValidate = options.onValidate;
+		this.onAttachValidate = options.onValidate;
+
+		/**
+		 * input時に値が変更されていた場合の通知
+		 * @type {((result: Guard) => void) | undefined}
+		 */
+		this.onAttachInput = options.onInput;
+
+		/**
+		 * onInput 判定のための直前の値（input時にこれと比較して変化を検知する）
+		 * @type {string}
+		 */
+		this.previousInputValue = "";
 
 		/**
 		 * blur時に値が変更されていた場合の通知
 		 * @type {((result: Guard) => void) | undefined}
 		 */
-		this.onChange = options.onChange;
+		this.onAttachChange = options.onChange;
 
 		/**
 		 * onChange 判定のための直前の値（blur時にこれと比較して変化を検知する）
 		 * @type {string}
 		 */
-		this.previousValue = "";
+		this.previousBlurValue = "";
+
+		/**
+		 * Undo/Redo用の履歴キュー（入力値の履歴を保持して、revert要求に対応するために使用）
+		 * @type {HistoryQueue}
+		 */
+		this.history = new HistoryQueue(options.historySize ?? 50);
 
 		/**
 		 * 実際に送信を担う要素（swap時は hidden(raw) 側）
@@ -771,8 +885,10 @@ class InputGuard {
 		this.bindEvents();
 		// 初期値を評価
 		this.evaluateCommit();
-		// 初期値を記録
-		this.previousValue = this.getDisplayValue();
+		// 初期値を記録（onInput/onChangeの比較用）
+		this.previousInputValue = this.getRawValue();
+		this.previousBlurValue = this.getDisplayValue();
+		this.history.push(this.getRawValue());
 	}
 
 	/**
@@ -1047,7 +1163,7 @@ class InputGuard {
 	 */
 	createCtx({ useSnapshot = true } = {}) {
 		// 入力後のテキストを取得
-		const afterText = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement).value;
+		let afterText = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement).value;
 		const snap = useSnapshot ? this.beforeInputSnapshot : null;
 		let inputType = snap?.inputType ?? "";
 		let insertedText = snap?.insertedText ?? "";
@@ -1146,10 +1262,21 @@ class InputGuard {
 
 		// アンドゥリドゥの特殊処理
 		if (inputType === "historyUndo" || inputType === "historyRedo") {
-			const diff = this.detectTextDiff(beforeText, afterText);
-			replaceStart = diff.replaceStart;
-			replaceEnd = diff.replaceEnd;
-			insertedText = diff.insertedText;
+			let newText = null;
+			console.log(inputType);
+			console.log(this.history.toString());
+			if (inputType === "historyUndo") {
+				newText = this.history.undo();
+			} else if (inputType === "historyRedo") {
+				newText = this.history.redo();
+			}
+			if (newText !== null) {
+				afterText = newText;
+				const diff = this.detectTextDiff(beforeText, afterText);
+				replaceStart = diff.replaceStart;
+				replaceEnd = diff.replaceEnd;
+				insertedText = diff.insertedText;
+			}
 		}
 
 		return {
@@ -1195,13 +1322,13 @@ class InputGuard {
 	 * @returns {void}
 	 */
 	notifyValidate(source) {
-		if (!this.onValidate) {
+		if (!this.onAttachValidate) {
 			return;
 		}
 
 		const errors = this.getErrors();
 
-		this.onValidate({
+		this.onAttachValidate({
 			guard: this.getGuard(),
 			source,
 			errors,
@@ -1390,10 +1517,10 @@ class InputGuard {
 	onBlur() {
 		// console.log("[text-input-guard] blur");
 		this.evaluateCommit();
-		if (this.previousValue !== this.getDisplayValue()) {
-			this.previousValue = this.getDisplayValue();
-			if (this.onChange) {
-				this.onChange(this.getGuard());
+		if (this.previousBlurValue !== this.getDisplayValue()) {
+			this.previousBlurValue = this.getDisplayValue();
+			if (this.onAttachChange) {
+				this.onAttachChange(this.getGuard());
 			}
 		}
 	}
@@ -1414,21 +1541,27 @@ class InputGuard {
 		ctx.beforeText = "";
 		ctx.afterText = current;
 
-		let v = current;
-		v = this.runNormalizeChar(v, ctx);
-		v = this.runNormalizeStructure(v, ctx);
+		let raw = current;
+		raw = this.runNormalizeChar(raw, ctx);
+		raw = this.runNormalizeStructure(raw, ctx);
 
-		if (v !== current) {
-			this.setDisplayValuePreserveCaret(display, v, ctx);
-			this.syncRaw(v);
+		if (raw !== current) {
+			this.setDisplayValuePreserveCaret(display, raw, ctx);
+			this.syncRaw(raw);
 		}
 
 		// 受理値更新（blockで戻す位置も自然になる）
-		this.lastAcceptedValue = v;
+		this.lastAcceptedValue = raw;
 		this.lastAcceptedSelection = this.readSelection(display);
 
 		// キャレット/選択範囲の変化も反映しておく（blockで戻す位置も自然になる）
 		this.onSelectionChange();
+
+		// previousInputValueも更新（次の入力で差分再構成の基準になる）
+		this.previousInputValue = raw;
+
+		// 中の値が替わっている可能性を考えて、historyも更新しておく（undoしたときに不自然にならないように）
+		this.history.push(raw);
 	}
 
 	/**
@@ -1624,6 +1757,17 @@ class InputGuard {
 
 		// コールバック関数処理
 		this.notifyValidate("input");
+		if (this.previousInputValue !== raw) {
+			this.previousInputValue = raw;
+
+			// historyに積む（undoの基準になる）
+			this.history.push(raw);
+
+			// 変更コールバック
+			if (this.onAttachInput) {
+				this.onAttachInput(this.getGuard());
+			}
+		}
 	}
 
 	/**
@@ -7557,11 +7701,11 @@ const rules = {
 
 /**
  * バージョン（ビルド時に置換したいならここを差し替える）
- * 例: rollup replace で ""1.1.0"" を package.json の version に置換
+ * 例: rollup replace で ""1.2.0"" を package.json の version に置換
  */
 // @ts-ignore
 // eslint-disable-next-line no-undef
-const version = "1.1.0" ;
+const version = "1.2.0" ;
 
 /**
  * UMD公開時のグローバルオブジェクト

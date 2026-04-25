@@ -106,7 +106,9 @@ const guard = guards.getGuards()[0];
 | `rules`        | `Rule[]`                           | `[]`           | 適用するルール配列。配列の順番が各フェーズ内での実行順になります。                                                  |
 | `warn`         | `boolean`                          | `true`         | 非対応ルールや不正な設定があった場合に `console.warn` を出力するかどうか。                                          |
 | `invalidClass` | `string`                           | `"is-invalid"` | エラーが存在する場合に `displayElement` に付与される CSS クラス名。                                                 |
+| `historySize`  | `number`                           | `50`           | Undo/Redo を受け付ける履歴の最大数。                                                                                |
 | `onValidate`   | `(result: ValidateResult) => void` | -              | バリデーション評価が完了した際に呼び出されるコールバック。入力中 (`input`) と確定時 (`commit`) の両方で呼ばれます。 |
+| `onInput`      | `(result: Guard) => void`          | -              | 入力後に値が変更されていた際に呼び出されるコールバック。                                                            |
 | `onChange`     | `(result: Guard) => void`          | -              | フォーカスが外れた値が変更されていた際に呼び出されるコールバック。                                                  |
 
 ### Guard
@@ -296,6 +298,15 @@ guard.setValue("", "none");
 | `source`  | `"input" \| "commit"` | 評価が実行されたタイミング              |
 | `errors`  | `TigError[]`          | 発生しているエラー一覧                  |
 | `isValid` | `boolean`             | エラーが存在しない場合 `true`           |
+
+### onInput
+
+`onInput` は入力欄の内容に変更があった際に呼び出されます。
+
+コールバックには `Guard` が渡されます。
+変更後に何か処理をしたい場合は、
+このコールバック内で `guard.getRawValue()` を利用して変更後の値を取得し、処理をすることを想定しています。
+入力途中のため文字列に対してカンマ等を付けていない状態になり `guard.getDisplayValue()` の値は `guard.getRawValue()` の値と等しい情報となります。
 
 ### onChange
 

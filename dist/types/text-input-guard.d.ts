@@ -284,9 +284,17 @@ type AttachOptions = {
      */
     separateValue?: SeparateValueOptions;
     /**
+     * - 記録する履歴の最大件数
+     */
+    historySize?: number;
+    /**
      * - 評価完了時の通知（input/commitごと）
      */
     onValidate?: (result: ValidateResult) => void;
+    /**
+     * - 入力時に値が変更されていた場合の通知
+     */
+    onInput?: (result: Guard) => void;
     /**
      * - フォーカスが外れた値が変更されていた場合の通知
      */
