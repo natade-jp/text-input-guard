@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8" />
+		<title>TextInputGuard - textarea dev</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 40px;
+			}
+			input {
+				font-size: 18px;
+				padding: 6px 8px;
+				width: 200px;
+			}
+			.is-invalid {
+				border: 2px solid red;
+				background: #fff4f4;
+			}
+			pre {
+				background: #f5f5f5;
+				padding: 12px;
+				margin-top: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>textarea rule dev test</h1>
+
+		<label> 文字列入力: </label>
+
+		<div>
+			<textarea id="input" type="text" rows="5" cols="50"></textarea>
+		</div>
+
+		<div style="margin-top: 20px">
+			<button id="check">isValid()</button>
+		</div>
+
+		<pre id="output"></pre>
+
+		<script type="module" src="./textarea.js"></script>
+	</body>
+</html>

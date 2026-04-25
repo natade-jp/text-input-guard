@@ -1061,7 +1061,10 @@ class InputGuard {
 		/** @type {string|null} */
 		const inputType = typeof e.inputType === "string" ? e.inputType : null;
 		/** @type {string|null} */
-		const insertedText = typeof e.data === "string" ? e.data : null;
+		let insertedText = typeof e.data === "string" ? e.data : null;
+		if (insertedText === null && (inputType === "insertLineBreak" || inputType === "insertParagraph")) {
+			insertedText = "\n";
+		}
 		this.existBeforeInputEvent = true;
 		this.beforeInputSnapshot = { selection, inputType, insertedText };
 	}
