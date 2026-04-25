@@ -25,7 +25,10 @@ const guard = attach(input, {
 		rules.prefix({ text: "[" }),
 		rules.suffix({ text: "]" })
 		*/
-	]
+	],
+	onChange: (guard) => {
+		console.log("value changed", guard.getRawValue());
+	}
 });
 
 // guard.setValue("123");

@@ -143,6 +143,7 @@ import { SwapState } from "./swap-state.js";
  * @property {string} [invalidClass="is-invalid"] - エラー時に付けるclass名
  * @property {SeparateValueOptions} [separateValue] - 表示値と内部値の分離設定
  * @property {(result: ValidateResult) => void} [onValidate] - 評価完了時の通知（input/commitごと）
+ * @property {(result: Guard) => void} [onChange] - フォーカスが外れた値が変更されていた場合の通知
  */
 
 /**
@@ -307,6 +308,18 @@ class InputGuard {
 		 * @type {((result: ValidateResult) => void) | undefined}
 		 */
 		this.onValidate = options.onValidate;
+
+		/**
+		 * blur時に値が変更されていた場合の通知
+		 * @type {((result: Guard) => void) | undefined}
+		 */
+		this.onChange = options.onChange;
+
+		/**
+		 * onChange 判定のための直前の値（blur時にこれと比較して変化を検知する）
+		 * @type {string}
+		 */
+		this.previousValue = "";
 
 		/**
 		 * 実際に送信を担う要素（swap時は hidden(raw) 側）
@@ -488,6 +501,8 @@ class InputGuard {
 		this.bindEvents();
 		// 初期値を評価
 		this.evaluateCommit();
+		// 初期値を記録
+		this.previousValue = this.getDisplayValue();
 	}
 
 	/**
@@ -727,6 +742,8 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtx({ useSnapshot = true } = {}) {
+		// 入力後のテキストを取得
+		const afterText = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement).value;
 		const snap = useSnapshot ? this.beforeInputSnapshot : null;
 		let inputType = snap?.inputType ?? "";
 		let insertedText = snap?.insertedText ?? "";
@@ -771,21 +788,19 @@ class InputGuard {
 
 		// beforeinput がない環境では、差分再構成の基準が「前回の受理値」しかないため、そこから今回の編集内容を推測する必要がある。
 		if (beforeText.length === 0 || !this.existBeforeInputEvent) {
-			const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-			const current = display.value;
 			// 前回の値がとれないものの、何かしら入力情報がある状態
-			if (current.length > 0) {
+			if (afterText.length > 0) {
 				// 文字列の先頭が前回の受理値と同じなら、末尾に何かしら入力されたと考えられる（オートコンプリート等）
-				if (current.toLocaleLowerCase().startsWith(beforeText.toLocaleLowerCase())) {
-					if (!current.startsWith(beforeText)) {
+				if (afterText.toLocaleLowerCase().startsWith(beforeText.toLocaleLowerCase())) {
+					if (!afterText.startsWith(beforeText)) {
 						// 文字は同じだが、大文字と小文字の情報が替わっているなどのパターン
 						// 差し代わりが起きているため、前回値は基準にならないと判断して、差分全体を insertedText とする
 						beforeText = "";
-						insertedText = current;
+						insertedText = afterText;
 					} else {
 						// 末尾に追加されたと考えられる部分を insertedText とする
-						// 例: beforeText="abc" → current="abcde" なら、"de" が insertedText
-						insertedText = current.slice(beforeText.length);
+						// 例: beforeText="abc" → afterText="abcde" なら、"de" が insertedText
+						insertedText = afterText.slice(beforeText.length);
 					}
 					// キャレットは前回値の末尾にあると推測する
 					baseSel = /** @type {SelectionState} */ {
@@ -836,7 +851,7 @@ class InputGuard {
 			replaceStart,
 			replaceEnd,
 			insertedText,
-			afterText: null, // 後で代入する
+			afterText,
 			pushError: (e) => this.errors.push(e),
 			requestRevert: (req) => {
 				// 1回でもrevert要求が出たら採用（最初の理由を保持）
@@ -1058,6 +1073,12 @@ class InputGuard {
 	onBlur() {
 		// console.log("[text-input-guard] blur");
 		this.evaluateCommit();
+		if (this.previousValue !== this.getDisplayValue()) {
+			this.previousValue = this.getDisplayValue();
+			if (this.onChange) {
+				this.onChange(this.getGuard());
+			}
+		}
 	}
 
 	/**
@@ -1182,10 +1203,7 @@ class InputGuard {
 	 * @returns {GuardContext}
 	 */
 	createCtxAndNormalize() {
-		const display = /** @type {HTMLInputElement|HTMLTextAreaElement} */ (this.displayElement);
-		const current = display.value;
 		const ctx = this.createCtx();
-		ctx.afterText = current;
 
 		// 元のテキスト
 		const beforeText = ctx.beforeText;
@@ -1197,7 +1215,7 @@ class InputGuard {
 		const replaceStart = ctx.replaceStart;
 
 		// 現状のテキスト
-		const tempText = current;
+		const tempText = ctx.afterText;
 
 		// 作成する全体のテキスト
 		let newText = beforeText;
@@ -1242,7 +1260,7 @@ class InputGuard {
 
 		// 画面を更新
 		this.syncDisplay(newText);
-		this.writeSelection(display, newSelection);
+		this.writeSelection(this.displayElement, newSelection);
 
 		// CTX の情報を最新の情報へ更新する
 		ctx.afterText = newText;
