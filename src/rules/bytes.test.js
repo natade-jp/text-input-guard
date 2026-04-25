@@ -237,3 +237,70 @@ test("bytes - fromDataset: unit が不正（未対応値）なら default(utf-8)
 	assert.equal(errs.length, 1);
 	assert.deepEqual(errs[0].detail, { limit: 4, actual: 5 });
 });
+
+test("bytes - newline: LF(\\n) を1バイトとして扱う（utf-8）", () => {
+	const rule = bytes({ max: 3, mode: "block", unit: "utf-8", newline: "\n" });
+
+	const ctx = makeCtx({
+		beforeText: "",
+		insertedText: "a\nb" // a(1) + \n(1) + b(1) = 3
+	});
+
+	const out = rule.normalizeChar("a\nb", ctx);
+
+	assert.equal(out, "a\nb");
+});
+
+test("bytes - newline: CRLF(\\r\\n) を2バイトとして扱う（utf-8）", () => {
+	const rule = bytes({ max: 3, mode: "block", unit: "utf-8", newline: "\r\n" });
+
+	const ctx = makeCtx({
+		beforeText: "",
+		insertedText: "a\nb" // a(1) + \r\n(2) + b(1) = 4 > 3
+	});
+
+	const out = rule.normalizeChar("a\nb", ctx);
+
+	// "a\n" まで入る想定（= a + 改行）
+	assert.equal(out, "a\n");
+});
+
+test("bytes - newline: CR(\\r) を1バイトとして扱う（utf-8）", () => {
+	const rule = bytes({ max: 2, mode: "block", unit: "utf-8", newline: "\r" });
+
+	const ctx = makeCtx({
+		beforeText: "",
+		insertedText: "\n\n" // 改行2つ → 1byte×2 = 2
+	});
+
+	const out = rule.normalizeChar("\n\n", ctx);
+
+	assert.equal(out, "\n\n");
+});
+
+test("bytes - newline: 入力に CRLF が混在しても正規化してカウントされる", () => {
+	const rule = bytes({ max: 3, mode: "block", unit: "utf-8", newline: "\n" });
+
+	const ctx = makeCtx({
+		beforeText: "",
+		insertedText: "a\r\nb"
+	});
+
+	const out = rule.normalizeChar("a\r\nb", ctx);
+
+	// a(1) + \n(1) + b(1) = 3
+	assert.equal(out, "a\r\nb");
+});
+
+test("bytes - newline: validate でも改行が指定コードで計算される", () => {
+	const rule = bytes({ max: 3, mode: "error", unit: "utf-8", newline: "\r\n" });
+
+	const ctx = makeCtx();
+
+	// a(1) + \r\n(2) + b(1) = 4 > 3
+	rule.validate("a\nb", ctx);
+
+	const errs = ctx._getErrors();
+	assert.equal(errs.length, 1);
+	assert.deepEqual(errs[0].detail, { limit: 3, actual: 4 });
+});

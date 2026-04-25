@@ -18,6 +18,12 @@ const guard = attach(input, {
 			max: 10,
 			mode: "block",
 			unit: "grapheme"
+		}),
+		rules.bytes({
+			max: 5,
+			mode: "block",
+			unit: "sjis",
+			newline: "\r\n"
 		})
 	],
 	onChange: (guard) => {

@@ -14,9 +14,10 @@ import { parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
 /**
  * bytes ルールのオプション
  * @typedef {Object} BytesRuleOptions
- * @property {number} [max] - 最大長（グラフェム数）。未指定なら制限なし
+ * @property {number} [max] - バイト数。未指定なら制限なし
  * @property {"block"|"error"} [mode="block"] - 入力中に最大長を超えたときの挙動
  * @property {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} [unit="utf-8"] - サイズの単位(sjis系を使用する場合はfilterも必須)
+ * @property {"\n"|"\r"|"\r\n"} [newline="\n"] - 改行の扱い(バイト数計算に影響あり)
  */
 
 /**
@@ -25,25 +26,28 @@ import { parseDatasetNumber, parseDatasetEnum } from "./_dataset.js";
  */
 
 /**
- * グラフェム/UTF-16コード単位/UTF-32コード単位の長さを調べる
+ * テキストのバイト数を調べる
  * @param {string} text
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {number}
  */
-const getTextBytesByUnit = function(text, unit) {
+const getTextBytesByUnit = function(text, unit, newline) {
 	if (text.length === 0) {
 		return 0;
 	}
+
+	const normalizedText = text.replace(/\r?\n/g, newline);
+
 	if (unit === "utf-8") {
-		return Mojix.toUTF8Array(text).length;
+		return Mojix.toUTF8Array(normalizedText).length;
 	} else if (unit === "utf-16") {
-		return Mojix.toUTF16Array(text).length * 2;
+		return Mojix.toUTF16Array(normalizedText).length * 2;
 	} else if (unit === "utf-32") {
-		return Mojix.toUTF32Array(text).length * 4;
+		return Mojix.toUTF32Array(normalizedText).length * 4;
 	} else if (unit === "sjis" || unit === "cp932") {
-		return Mojix.encode(text, "Shift_JIS").length;
+		return Mojix.encode(normalizedText, "Shift_JIS").length;
 	} else {
-		// ここには来ない
 		throw new Error(`Invalid unit: ${unit}`);
 	}
 };
@@ -53,9 +57,10 @@ const getTextBytesByUnit = function(text, unit) {
  * @param {string} text
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {string}
  */
-const cutTextByUnit = function(text, unit, max) {
+const cutTextByUnit = function(text, unit, max, newline) {
 	/**
 	 * グラフェムの配列
 	 * @type {Grapheme[]}
@@ -74,19 +79,10 @@ const cutTextByUnit = function(text, unit, max) {
 	const outputGraphemeArray = [];
 
 	for (let i = 0; i < graphemeArray.length; i++) {
-		const g = graphemeArray[i];
-
 		// 1グラフェムあたりの長さ
-		let byteCount = 0;
-		if (unit === "utf-8") {
-			byteCount = Mojix.toUTF8Array(Mojix.toStringFromMojiArray([g])).length;
-		} else if (unit === "utf-16") {
-			byteCount = Mojix.toUTF16Array(Mojix.toStringFromMojiArray([g])).length * 2;
-		} else if (unit === "utf-32") {
-			byteCount = Mojix.toUTF32Array(Mojix.toStringFromMojiArray([g])).length * 4;
-		} else if (unit === "sjis" || unit === "cp932") {
-			byteCount = Mojix.encode(Mojix.toStringFromMojiArray([g]), "Shift_JIS").length;
-		}
+		const g = graphemeArray[i];
+		const gText = Mojix.toStringFromMojiArray([g]);
+		const byteCount = getTextBytesByUnit(gText, unit, newline);
 
 		if (count + byteCount > max) {
 			// 空配列を渡すとNUL文字を返すため、空配列のときは空文字を返す
@@ -111,15 +107,16 @@ const cutTextByUnit = function(text, unit, max) {
  * @param {string} insertedText 追加するテキスト
  * @param {"utf-8"|"utf-16"|"utf-32"|"sjis"|"cp932"} unit
  * @param {number} max
+ * @param {"\n"|"\r"|"\r\n"} newline
  * @returns {string} 追加するテキストを切ったもの（切る必要がない場合は insertedText をそのまま返す）
  */
-const cutBytes = function(beforeText, insertedText, unit, max) {
-	const beforeTextLen = getTextBytesByUnit(beforeText, unit);
+const cutBytes = function(beforeText, insertedText, unit, max, newline) {
+	const beforeTextLen = getTextBytesByUnit(beforeText, unit, newline);
 
 	// すでに最大長を超えている場合は追加のテキストを全て切る
 	if (beforeTextLen >= max) { return ""; }
 
-	const insertedTextLen = getTextBytesByUnit(insertedText, unit);
+	const insertedTextLen = getTextBytesByUnit(insertedText, unit, newline);
 	const totalLen = beforeTextLen + insertedTextLen;
 
 	if (totalLen <= max) {
@@ -129,7 +126,7 @@ const cutBytes = function(beforeText, insertedText, unit, max) {
 
 	// 超える場合は追加のテキストを切る
 	const allowedAddLen = max - beforeTextLen;
-	return cutTextByUnit(insertedText, unit, allowedAddLen);
+	return cutTextByUnit(insertedText, unit, allowedAddLen, newline);
 };
 
 /**
@@ -138,12 +135,10 @@ const cutBytes = function(beforeText, insertedText, unit, max) {
  * @returns {import("../text-input-guard.js").Rule}
  */
 export function bytes(options = {}) {
-	/** @type {BytesRuleOptions} */
-	const opt = {
-		max: typeof options.max === "number" ? options.max : undefined,
-		mode: options.mode ?? "block",
-		unit: options.unit ?? "utf-8"
-	};
+	const max = typeof options.max === "number" ? options.max : undefined;
+	const mode = options.mode ?? "block";
+	const unit = options.unit ?? "utf-8";
+	const newline = options.newline ?? "\n";
 
 	return {
 		name: "bytes",
@@ -151,35 +146,35 @@ export function bytes(options = {}) {
 
 		normalizeChar(value, ctx) {
 			// block 以外は何もしない
-			if (opt.mode !== "block") {
+			if (mode !== "block") {
 				return value;
 			}
 			// max 未指定なら制限なし
-			if (typeof opt.max !== "number") {
+			if (typeof max !== "number") {
 				return value;
 			}
 
-			const cutText = cutBytes(ctx.beforeText, value, opt.unit, opt.max);
+			const cutText = cutBytes(ctx.beforeText, value, unit, max, newline);
 			return cutText;
 		},
 
 		validate(value, ctx) {
 			// error 以外は何もしない
-			if (opt.mode !== "error") {
+			if (mode !== "error") {
 				return;
 			}
 			// max 未指定なら制限なし
-			if (typeof opt.max !== "number") {
+			if (typeof max !== "number") {
 				return;
 			}
 
-			const len = getTextBytesByUnit(value, opt.unit);
-			if (len > opt.max) {
+			const len = getTextBytesByUnit(value, unit, newline);
+			if (len > max) {
 				ctx.pushError({
 					code: "bytes.max_overflow",
 					rule: "bytes",
 					phase: "validate",
-					detail: { limit: opt.max, actual: len }
+					detail: { limit: max, actual: len }
 				});
 			}
 		}
@@ -196,6 +191,7 @@ export function bytes(options = {}) {
  * - data-tig-rules-bytes-max                 -> dataset.tigRulesBytesMax
  * - data-tig-rules-bytes-mode                -> dataset.tigRulesBytesMode
  * - data-tig-rules-bytes-unit                -> dataset.tigRulesBytesUnit
+ * - data-tig-rules-bytes-newline             -> dataset.tigRulesBytesNewline
  *
  * @param {DOMStringMap} dataset
  * @param {HTMLInputElement|HTMLTextAreaElement} _el
@@ -226,6 +222,14 @@ bytes.fromDataset = function fromDataset(dataset, _el) {
 	);
 	if (unit != null) {
 		options.unit = unit;
+	}
+
+	const newline = parseDatasetEnum(
+		dataset.tigRulesBytesNewline,
+		["\n", "\r", "\r\n"]
+	);
+	if (newline != null) {
+		options.newline = newline;
 	}
 
 	return bytes(options);
