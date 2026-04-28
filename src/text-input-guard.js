@@ -1,5 +1,5 @@
 ﻿/**
- * The script is part of JPInputGuard.
+ * The script is part of TextInputGuard.
  *
  * AUTHOR:
  *  natade-jp (https://github.com/natade-jp)
@@ -350,6 +350,8 @@ class HistoryQueue {
 	}
 }
 
+let globalGuardId = 0; // デバッグ用のガードID生成
+
 class InputGuard {
 	/**
 	 * InputGuard の内部状態を初期化する（DOM/設定/イベント/パイプラインを持つ）
@@ -357,6 +359,12 @@ class InputGuard {
 	 * @param {AttachOptions} options
 	 */
 	constructor(element, options) {
+		/**
+		 * ガードID（デバッグ用、インスタンスごとにユニーク）
+		 * @type {number}
+		 */
+		this.id = ++globalGuardId;
+
 		/**
 		 * attach対象の元の要素（swap前の原本）
 		 * detach時の復元や基準参照に使う
@@ -438,7 +446,7 @@ class InputGuard {
 		/**
 		 * 実際に送信を担う要素（swap時は hidden(raw) 側）
 		 * swapしない場合は originalElement と同一
-		 * @type {HTMLElement}
+		 * @type {HTMLInputElement|HTMLTextAreaElement}
 		 */
 		this.hostElement = element;
 
@@ -550,6 +558,11 @@ class InputGuard {
 		this.onFocus = this.onFocus.bind(this);
 
 		/**
+		 * keydownイベントハンドラ（this固定）
+		 */
+		this.onKeyDown = this.onKeyDown.bind(this);
+
+		/**
 		 * キャレット/選択範囲の変化イベントハンドラ（this固定）
 		 */
 		this.onSelectionChange = this.onSelectionChange.bind(this);
@@ -602,6 +615,14 @@ class InputGuard {
 		 * @type {RevertRequest|null}
 		 */
 		this.revertRequest = null;
+	}
+
+	/**
+	 * デバッグ用の文字列化
+	 * @returns {string}
+	 */
+	toString() {
+		return `[TextInputGuard#${this.id} kind=${this.kind} host=${this.hostElement.tagName.toLowerCase()}#${this.hostElement.id}] value=${this.hostElement.value}]`;
 	}
 
 	/**
@@ -808,6 +829,7 @@ class InputGuard {
 		this.displayElement.addEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.addEventListener("blur", this.onBlur);
 		this.displayElement.addEventListener("focus", this.onFocus);
+		this.displayElement.addEventListener("keydown", this.onKeyDown);
 	}
 
 	/**
@@ -821,6 +843,7 @@ class InputGuard {
 		this.displayElement.removeEventListener("beforeinput", this.onBeforeInput);
 		this.displayElement.removeEventListener("blur", this.onBlur);
 		this.displayElement.removeEventListener("focus", this.onFocus);
+		this.displayElement.removeEventListener("keydown", this.onKeyDown);
 	}
 
 	/**
@@ -1240,6 +1263,19 @@ class InputGuard {
 		}
 		this.existBeforeInputEvent = true;
 		this.beforeInputSnapshot = { selection, inputType, insertedText };
+
+		// アンドゥリドゥの beforeinput はフォーカスされている要素以外にも発生することがあるため、
+		// 正しく判定するために onKeyDown で捕まえて、必要なときだけ onBeforeInput のスナップを作る
+		if (inputType === "historyUndo" || inputType === "historyRedo") {
+			e.preventDefault();
+
+			// フォーカス中ではない要素に飛んできたUndo/Redoは止めるだけ
+			if (document.activeElement !== this.displayElement) {
+				return;
+			}
+
+			this.evaluateInput();
+		}
 	}
 
 	/**
@@ -1294,6 +1330,51 @@ class InputGuard {
 
 		// 中の値が替わっている可能性を考えて、historyも更新しておく（undoしたときに不自然にならないように）
 		this.history.push(raw);
+	}
+
+	/**
+	 * keydownイベント：特殊な用途向けに提供（例：Enterで確定させたいなど）
+	 * @param {Event} e
+	 * @returns {void}
+	 */
+	onKeyDown(e) {
+		if (!(e instanceof KeyboardEvent)) {
+			return;
+		}
+
+		// アンドゥ及びリドゥの onBeforeInput はフォーカスされている要素以外にも発生することがあるため
+		// 正しく判定するために onKeyDown で捕まえて、必要なときだけ onBeforeInput のスナップを作る
+
+		const isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z";
+		const isRedo =
+			((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") ||
+			((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y");
+
+		if (!isUndo && !isRedo) {
+			return;
+		}
+
+		// ここでチェックする
+		if (document.activeElement !== this.displayElement) {
+			return;
+		}
+
+		// ブラウザのデフォルトの undo/redo をキャンセルして、自前でUndo/Redo を発生させる
+		e.preventDefault();
+
+		// 擬似beforeinputのスナップを作る
+		this.beforeInputSnapshot = {
+			selection: this.readSelection(this.displayElement),
+			inputType: isUndo ? "historyUndo" : "historyRedo",
+			insertedText: ""
+		};
+
+		this.existBeforeInputEvent = true;
+		try {
+			this.evaluateInput();
+		} finally {
+			this.existBeforeInputEvent = false;
+		}
 	}
 
 	/**
@@ -1639,7 +1720,7 @@ class InputGuard {
 
 	/**
 	 * 外部に公開する Guard API を生成して返す
-	 * - InputGuard 自体を公開せず、最小の操作だけを渡す
+	 * - TextInputGuard 自体を公開せず、最小の操作だけを渡す
 	 * @returns {Guard}
 	 */
 	getGuard() {
