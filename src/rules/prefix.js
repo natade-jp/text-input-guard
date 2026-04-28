@@ -32,7 +32,7 @@ export function prefix(options) {
 
 	return {
 		name: "prefix",
-		targets: ["input"],
+		targets: ["input", "textarea"],
 
 		/**
 		 * 手動入力された prefix を除去

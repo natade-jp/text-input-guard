@@ -7,6 +7,8 @@ input.value = "あいうえお";
 
 const guard = attach(input, {
 	rules: [
+		rules.prefix({ text: "[" }),
+		rules.suffix({ text: "]" }),
 		rules.kana({
 			target: "katakana-full"
 		}),
@@ -15,12 +17,12 @@ const guard = attach(input, {
 			allow: /[ \r\n]/
 		}),
 		rules.length({
-			max: 10,
+			max: 20,
 			mode: "block",
 			unit: "grapheme"
 		}),
 		rules.bytes({
-			max: 5,
+			max: 8,
 			mode: "block",
 			unit: "sjis",
 			newline: "\r\n"

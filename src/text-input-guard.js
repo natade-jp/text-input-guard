@@ -89,7 +89,7 @@ import { SwapState } from "./swap-state.js";
  * @typedef {Object} GuardContext
  * @property {HTMLElement} hostElement - 元の要素（swap時はraw側）
  * @property {HTMLElement} displayElement - ユーザーが操作する表示要素
- * @property {HTMLInputElement|null} rawElement - 送信用hidden要素（swap時のみ）
+ * @property {HTMLInputElement|HTMLTextAreaElement|null} rawElement - 送信用hidden要素（swap時のみ）
  * @property {ElementKind} kind - 要素種別（input / textarea）
  * @property {boolean} warn - warnログを出すかどうか
  * @property {string} invalidClass - エラー時に付与するclass名
@@ -460,7 +460,7 @@ class InputGuard {
 		/**
 		 * swap時に生成される hidden(raw) input
 		 * swapしない場合は null
-		 * @type {HTMLInputElement|null}
+		 * @type {HTMLInputElement|HTMLTextAreaElement|null}
 		 */
 		this.rawElement = null;
 
@@ -679,7 +679,7 @@ class InputGuard {
 
 	/**
 	 * separateValue.mode="swap" のとき、input を hidden(raw) にして display(input[type=text]) を生成する
-	 * - textarea は非対応（warnして無視）
+	 * - textarea も対応（hidden属性とdisplay:noneを使用）
 	 * @returns {void}
 	 */
 	applySeparateValue() {
@@ -695,25 +695,20 @@ class InputGuard {
 			return;
 		}
 
-		if (this.kind !== "input") {
-			warnLog('[text-input-guard] separateValue.mode="swap" is not supported for <textarea>. ignored.', this.warn);
-			return;
-		}
+		const element = this.originalElement;
 
-		const input = /** @type {HTMLInputElement} */ (this.originalElement);
+		const state = new SwapState(element);
+		state.applyToRaw(element);
 
-		const state = new SwapState(input);
-		state.applyToRaw(input);
-
-		const display = state.createDisplay(input);
-		input.after(display);
+		const display = state.createDisplay(element);
+		element.after(display);
 
 		this.swapState = state;
 
 		// elements更新
-		this.hostElement = input;      // raw
+		this.hostElement = element;      // raw
 		this.displayElement = display; // display
-		this.rawElement = input;
+		this.rawElement = element;
 
 		// revert 機構
 		this.lastAcceptedValue = display.value;

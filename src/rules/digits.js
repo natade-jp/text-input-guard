@@ -154,7 +154,6 @@ function roundFraction(intPart, fracPart, fracLimit) {
  * @returns {import("../text-input-guard.js").Rule}
  */
 export function digits(options = {}) {
-	/** @type {DigitsRuleOptions} */
 	const opt = {
 		int: typeof options.int === "number" ? options.int : undefined,
 		frac: typeof options.frac === "number" ? options.frac : undefined,
@@ -168,7 +167,7 @@ export function digits(options = {}) {
 
 	return {
 		name: "digits",
-		targets: ["input"],
+		targets: ["input", "textarea"],
 
 		/**
 		 * 桁数チェック（入力中：エラーを積むだけ）

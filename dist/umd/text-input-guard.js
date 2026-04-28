@@ -18,10 +18,10 @@
 	 * SwapState
 	 *
 	 * separateValue.mode="swap" のときに使用する
-	 * 元 input 要素の状態スナップショットおよび復元ロジックを管理するクラス
+	 * 元 input/textarea 要素の状態スナップショットおよび復元ロジックを管理するクラス
 	 *
 	 * 役割
-	 *  - swap前の input の属性状態を保持する
+	 *  - swap前の input/textarea の属性状態を保持する
 	 *  - raw化および display生成時に必要な属性を適用する
 	 *  - detach時に元の状態へ復元する
 	 *
@@ -97,16 +97,16 @@
 		 * swap時に生成された display 用 input 要素
 		 * detach時に削除するため保持する
 		 *
-		 * @type {HTMLInputElement|null}
+		 * @type {HTMLInputElement|HTMLTextAreaElement|null}
 		 */
 		createdDisplay;
 
 		/**
-		 * @param {HTMLInputElement} input
+		 * @param {HTMLInputElement|HTMLTextAreaElement} input
 		 * swap前の元 input 要素
 		 */
 		constructor(input) {
-			this.originalType = input.type;
+			this.originalType = input.type || "";
 			this.originalId = input.getAttribute("id");
 			this.originalName = input.getAttribute("name");
 			this.originalClass = input.className;
@@ -117,22 +117,30 @@
 			this.createdDisplay = null;
 
 			const UI_ATTRS = [
-				"placeholder",
+				// input 有
 				"list",
+				"size",
+				"pattern",
+
+				// input / textarea 共有
+				"placeholder",
 				"inputmode",
 				"autocomplete",
 				"autocapitalize",
 				"autocorrect",
 				"minlength",
 				"maxlength",
-				"size",
-				"pattern",
 				"dir",
 				"title",
 				"tabindex",
 				"style",
 				"enterkeyhint",
-				"spellcheck"
+				"spellcheck",
+
+				// textarea 用
+				"rows",
+				"cols",
+				"wrap"
 			];
 
 			const UI_BOOL_ATTRS = [
@@ -168,12 +176,17 @@
 		 * raw 元input を hidden 化する
 		 * 送信担当要素として扱う
 		 *
-		 * @param {HTMLInputElement} input
+		 * @param {HTMLInputElement|HTMLTextAreaElement} input
 		 * @returns {void}
 		 */
 		applyToRaw(input) {
 			// raw化（送信担当）
-			input.type = "hidden";
+			if (input instanceof HTMLInputElement) {
+				input.type = "hidden";
+			} else if (input instanceof HTMLTextAreaElement) {
+				input.setAttribute("hidden", "");
+				input.style.display = "none";
+			}
 			input.removeAttribute("id");
 			input.removeAttribute("class");
 			input.className = "";
@@ -194,12 +207,22 @@
 		/**
 		 * display用 input を生成し UI属性 aria属性 data属性を適用
 		 *
-		 * @param {HTMLInputElement} raw hidden化された元input
-		 * @returns {HTMLInputElement}
+		 * @param {HTMLInputElement|HTMLTextAreaElement} raw hidden化された元input
+		 * @returns {HTMLInputElement|HTMLTextAreaElement}
 		 */
 		createDisplay(raw) {
-			const display = document.createElement("input");
-			display.type = "text";
+			/**
+			 * @type {HTMLInputElement|HTMLTextAreaElement}
+			 */
+			let display;
+			if (raw instanceof HTMLInputElement) {
+				display = document.createElement("input");
+				display.type = "text";
+			} else if (raw instanceof HTMLTextAreaElement) {
+				display = document.createElement("textarea");
+			} else {
+				throw new Error("Unsupported element type for display creation");
+			}
 			display.dataset.tigRole = "display";
 
 			if (this.originalId) {
@@ -248,11 +271,16 @@
 		/**
 		 * raw hidden化された元input を元の状態へ復元する
 		 *
-		 * @param {HTMLInputElement} raw
+		 * @param {HTMLInputElement|HTMLTextAreaElement} raw
 		 * @returns {void}
 		 */
 		restoreRaw(raw) {
-			raw.type = this.originalType;
+			if (raw instanceof HTMLInputElement) {
+				raw.type = this.originalType;
+			} else if (raw instanceof HTMLTextAreaElement) {
+				raw.removeAttribute("hidden");
+				raw.style.display = "";
+			}
 
 			if (this.originalId) {
 				raw.setAttribute("id", this.originalId);
@@ -365,7 +393,7 @@
 	 * @typedef {Object} GuardContext
 	 * @property {HTMLElement} hostElement - 元の要素（swap時はraw側）
 	 * @property {HTMLElement} displayElement - ユーザーが操作する表示要素
-	 * @property {HTMLInputElement|null} rawElement - 送信用hidden要素（swap時のみ）
+	 * @property {HTMLInputElement|HTMLTextAreaElement|null} rawElement - 送信用hidden要素（swap時のみ）
 	 * @property {ElementKind} kind - 要素種別（input / textarea）
 	 * @property {boolean} warn - warnログを出すかどうか
 	 * @property {string} invalidClass - エラー時に付与するclass名
@@ -736,7 +764,7 @@
 			/**
 			 * swap時に生成される hidden(raw) input
 			 * swapしない場合は null
-			 * @type {HTMLInputElement|null}
+			 * @type {HTMLInputElement|HTMLTextAreaElement|null}
 			 */
 			this.rawElement = null;
 
@@ -955,7 +983,7 @@
 
 		/**
 		 * separateValue.mode="swap" のとき、input を hidden(raw) にして display(input[type=text]) を生成する
-		 * - textarea は非対応（warnして無視）
+		 * - textarea も対応（hidden属性とdisplay:noneを使用）
 		 * @returns {void}
 		 */
 		applySeparateValue() {
@@ -971,25 +999,20 @@
 				return;
 			}
 
-			if (this.kind !== "input") {
-				warnLog('[text-input-guard] separateValue.mode="swap" is not supported for <textarea>. ignored.', this.warn);
-				return;
-			}
+			const element = this.originalElement;
 
-			const input = /** @type {HTMLInputElement} */ (this.originalElement);
+			const state = new SwapState(element);
+			state.applyToRaw(element);
 
-			const state = new SwapState(input);
-			state.applyToRaw(input);
-
-			const display = state.createDisplay(input);
-			input.after(display);
+			const display = state.createDisplay(element);
+			element.after(display);
 
 			this.swapState = state;
 
 			// elements更新
-			this.hostElement = input;      // raw
+			this.hostElement = element;      // raw
 			this.displayElement = display; // display
-			this.rawElement = input;
+			this.rawElement = element;
 
 			// revert 機構
 			this.lastAcceptedValue = display.value;
@@ -2433,7 +2456,7 @@
 
 		return {
 			name: "numeric",
-			targets: ["input"],
+			targets: ["input", "textarea"],
 
 			/**
 			 * 文字単位の正規化（全角→半角、記号統一、不要文字の除去）
@@ -2782,7 +2805,6 @@
 	 * @returns {Rule}
 	 */
 	function digits(options = {}) {
-		/** @type {DigitsRuleOptions} */
 		const opt = {
 			int: typeof options.int === "number" ? options.int : undefined,
 			frac: typeof options.frac === "number" ? options.frac : undefined,
@@ -2796,7 +2818,7 @@
 
 		return {
 			name: "digits",
-			targets: ["input"],
+			targets: ["input", "textarea"],
 
 			/**
 			 * 桁数チェック（入力中：エラーを積むだけ）
@@ -3049,7 +3071,7 @@
 	function comma() {
 		return {
 			name: "comma",
-			targets: ["input"],
+			targets: ["input", "textarea"],
 
 			/**
 			 * 表示整形（確定時のみ）
@@ -7528,7 +7550,7 @@
 
 		return {
 			name: "prefix",
-			targets: ["input"],
+			targets: ["input", "textarea"],
 
 			/**
 			 * 手動入力された prefix を除去
@@ -7622,7 +7644,7 @@
 
 		return {
 			name: "suffix",
-			targets: ["input"],
+			targets: ["input", "textarea"],
 
 			/**
 			 * 手動入力された suffix を除去
@@ -7788,11 +7810,11 @@
 
 	/**
 	 * バージョン（ビルド時に置換したいならここを差し替える）
-	 * 例: rollup replace で ""1.2.2"" を package.json の version に置換
+	 * 例: rollup replace で ""1.3.0"" を package.json の version に置換
 	 */
 	// @ts-ignore
 	// eslint-disable-next-line no-undef
-	const version = "1.2.2" ;
+	const version = "1.3.0" ;
 
 	/**
 	 * UMD公開時のグローバルオブジェクト

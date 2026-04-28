@@ -16,7 +16,7 @@
 export function comma() {
 	return {
 		name: "comma",
-		targets: ["input"],
+		targets: ["input", "textarea"],
 
 		/**
 		 * 表示整形（確定時のみ）

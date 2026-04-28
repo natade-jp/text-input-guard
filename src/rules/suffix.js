@@ -32,7 +32,7 @@ export function suffix(options) {
 
 	return {
 		name: "suffix",
-		targets: ["input"],
+		targets: ["input", "textarea"],
 
 		/**
 		 * 手動入力された suffix を除去

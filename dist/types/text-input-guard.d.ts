@@ -168,7 +168,7 @@ type GuardContext = {
     /**
      * - 送信用hidden要素（swap時のみ）
      */
-    rawElement: HTMLInputElement | null;
+    rawElement: HTMLInputElement | HTMLTextAreaElement | null;
     /**
      * - 要素種別（input / textarea）
      */

@@ -12,10 +12,10 @@
  * SwapState
  *
  * separateValue.mode="swap" のときに使用する
- * 元 input 要素の状態スナップショットおよび復元ロジックを管理するクラス
+ * 元 input/textarea 要素の状態スナップショットおよび復元ロジックを管理するクラス
  *
  * 役割
- *  - swap前の input の属性状態を保持する
+ *  - swap前の input/textarea の属性状態を保持する
  *  - raw化および display生成時に必要な属性を適用する
  *  - detach時に元の状態へ復元する
  *
@@ -91,16 +91,16 @@ export class SwapState {
 	 * swap時に生成された display 用 input 要素
 	 * detach時に削除するため保持する
 	 *
-	 * @type {HTMLInputElement|null}
+	 * @type {HTMLInputElement|HTMLTextAreaElement|null}
 	 */
 	createdDisplay;
 
 	/**
-	 * @param {HTMLInputElement} input
+	 * @param {HTMLInputElement|HTMLTextAreaElement} input
 	 * swap前の元 input 要素
 	 */
 	constructor(input) {
-		this.originalType = input.type;
+		this.originalType = input.type || "";
 		this.originalId = input.getAttribute("id");
 		this.originalName = input.getAttribute("name");
 		this.originalClass = input.className;
@@ -111,22 +111,30 @@ export class SwapState {
 		this.createdDisplay = null;
 
 		const UI_ATTRS = [
-			"placeholder",
+			// input 有
 			"list",
+			"size",
+			"pattern",
+
+			// input / textarea 共有
+			"placeholder",
 			"inputmode",
 			"autocomplete",
 			"autocapitalize",
 			"autocorrect",
 			"minlength",
 			"maxlength",
-			"size",
-			"pattern",
 			"dir",
 			"title",
 			"tabindex",
 			"style",
 			"enterkeyhint",
-			"spellcheck"
+			"spellcheck",
+
+			// textarea 用
+			"rows",
+			"cols",
+			"wrap"
 		];
 
 		const UI_BOOL_ATTRS = [
@@ -162,12 +170,17 @@ export class SwapState {
 	 * raw 元input を hidden 化する
 	 * 送信担当要素として扱う
 	 *
-	 * @param {HTMLInputElement} input
+	 * @param {HTMLInputElement|HTMLTextAreaElement} input
 	 * @returns {void}
 	 */
 	applyToRaw(input) {
 		// raw化（送信担当）
-		input.type = "hidden";
+		if (input instanceof HTMLInputElement) {
+			input.type = "hidden";
+		} else if (input instanceof HTMLTextAreaElement) {
+			input.setAttribute("hidden", "");
+			input.style.display = "none";
+		}
 		input.removeAttribute("id");
 		input.removeAttribute("class");
 		input.className = "";
@@ -188,12 +201,22 @@ export class SwapState {
 	/**
 	 * display用 input を生成し UI属性 aria属性 data属性を適用
 	 *
-	 * @param {HTMLInputElement} raw hidden化された元input
-	 * @returns {HTMLInputElement}
+	 * @param {HTMLInputElement|HTMLTextAreaElement} raw hidden化された元input
+	 * @returns {HTMLInputElement|HTMLTextAreaElement}
 	 */
 	createDisplay(raw) {
-		const display = document.createElement("input");
-		display.type = "text";
+		/**
+		 * @type {HTMLInputElement|HTMLTextAreaElement}
+		 */
+		let display;
+		if (raw instanceof HTMLInputElement) {
+			display = document.createElement("input");
+			display.type = "text";
+		} else if (raw instanceof HTMLTextAreaElement) {
+			display = document.createElement("textarea");
+		} else {
+			throw new Error("Unsupported element type for display creation");
+		}
 		display.dataset.tigRole = "display";
 
 		if (this.originalId) {
@@ -242,11 +265,16 @@ export class SwapState {
 	/**
 	 * raw hidden化された元input を元の状態へ復元する
 	 *
-	 * @param {HTMLInputElement} raw
+	 * @param {HTMLInputElement|HTMLTextAreaElement} raw
 	 * @returns {void}
 	 */
 	restoreRaw(raw) {
-		raw.type = this.originalType;
+		if (raw instanceof HTMLInputElement) {
+			raw.type = this.originalType;
+		} else if (raw instanceof HTMLTextAreaElement) {
+			raw.removeAttribute("hidden");
+			raw.style.display = "";
+		}
 
 		if (this.originalId) {
 			raw.setAttribute("id", this.originalId);

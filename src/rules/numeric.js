@@ -119,7 +119,7 @@ export function numeric(options = {}) {
 
 	return {
 		name: "numeric",
-		targets: ["input"],
+		targets: ["input", "textarea"],
 
 		/**
 		 * 文字単位の正規化（全角→半角、記号統一、不要文字の除去）
